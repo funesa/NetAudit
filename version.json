@@ -1,5 +1,5 @@
 {
-  "latest_version": "1.0.3",
+  "latest_version": "1.0.4",
   "download_url": "https://github.com/funesa/NetAudit/raw/main/NetAudit_System.exe",
-  "release_notes": "Novo: Wizard de boas-vindas interativo + Todas as correções anteriores"
+  "release_notes": "Novo: Opção de Desinstalar/Limpar sistema + Wizard de Boas-Vindas"
 }
