@@ -11,96 +11,95 @@
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            background: #020617;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0, transparent 50%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow-x: hidden;
+            font-family: 'Inter', -apple-system, sans-serif;
+            overflow: hidden;
         }
 
         .wizard-container {
-            width: 90%;
-            max-width: 900px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 24px;
+            width: 95%;
+            max-width: 650px;
+            max-height: 85vh;
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(40px);
+                transform: translateY(30px) scale(0.98);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
         }
 
         .wizard-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9));
+            padding: 24px;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .wizard-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            animation: pulse 4s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                opacity: 0.5;
-            }
-
-            50% {
-                transform: scale(1.1);
-                opacity: 0.8;
-            }
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .wizard-header h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 1.6rem;
             color: white;
-            font-weight: 700;
-            position: relative;
-            z-index: 1;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .wizard-header p {
-            margin: 10px 0 0;
+            margin: 6px 0 0;
             color: rgba(255, 255, 255, 0.9);
-            font-size: 1.1rem;
-            position: relative;
-            z-index: 1;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .wizard-body {
-            padding: 40px;
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+        }
+
+        .wizard-body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .wizard-body::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
         }
 
         .wizard-step {
             display: none;
-            animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.4s ease-out;
         }
 
         .wizard-step.active {
@@ -110,261 +109,209 @@
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateX(20px);
+                transform: translateY(10px);
             }
 
             to {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateY(0);
             }
         }
 
         .step-title {
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             color: white;
-            margin-bottom: 10px;
-            font-weight: 600;
+            margin-bottom: 8px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
         }
 
         .step-description {
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 30px;
-            font-size: 1rem;
+            color: #94a3b8;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
             line-height: 1.6;
         }
 
         .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 20px;
+            padding: 18px 22px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            opacity: 0;
-            transition: opacity 0.3s;
         }
 
         .feature-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(102, 126, 234, 0.5);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
-        }
-
-        .feature-card.selected {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateX(5px);
         }
 
         .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-            color: #667eea;
+            font-size: 2rem;
+            color: #818cf8;
+            filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
+            flex-shrink: 0;
         }
 
         .feature-title {
-            font-size: 1.3rem;
+            font-size: 1rem;
             color: white;
-            margin-bottom: 10px;
             font-weight: 600;
-            position: relative;
-            z-index: 1;
+            margin-bottom: 2px;
         }
 
         .feature-desc {
-            color: rgba(255, 255, 255, 0.6);
-            line-height: 1.5;
-            position: relative;
-            z-index: 1;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            line-height: 1.3;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             display: block;
-            color: white;
-            margin-bottom: 8px;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
             font-weight: 500;
         }
 
         .form-group input {
             width: 100%;
-            padding: 14px 18px;
-            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 10px;
             color: white;
-            font-size: 1rem;
-            transition: all 0.3s;
+            font-size: 0.9rem;
+            transition: all 0.2s;
             box-sizing: border-box;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-group input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            border-color: #6366f1;
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
         }
 
         .wizard-actions {
             display: flex;
             justify-content: space-between;
-            margin-top: 40px;
+            padding: 20px 30px;
+            background: rgba(15, 23, 42, 0.4);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             gap: 15px;
+            flex-shrink: 0;
         }
 
         .btn {
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s;
             border: none;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             color: white;
-            flex: 1;
+            min-width: 140px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
         }
 
         .btn-secondary {
             background: rgba(255, 255, 255, 0.05);
-            color: white;
+            color: #94a3b8;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.1);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            color: white;
         }
 
         .progress-bar {
             height: 4px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 2px;
+            margin-bottom: 20px;
             overflow: hidden;
-            margin-bottom: 30px;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            transition: width 0.4s ease;
         }
 
         .step-indicator {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 8px;
+            margin-bottom: 20px;
         }
 
         .step-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
             transition: all 0.3s;
         }
 
         .step-dot.active {
-            background: #667eea;
-            width: 30px;
-            border-radius: 5px;
-        }
-
-        .success-icon {
-            font-size: 5rem;
-            color: #4ade80;
-            text-align: center;
-            margin: 30px 0;
-            animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes scaleIn {
-            from {
-                transform: scale(0);
-            }
-
-            to {
-                transform: scale(1);
-            }
+            background: #818cf8;
+            width: 24px;
+            box-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
         }
 
         .checkbox-card {
             display: flex;
             align-items: center;
-            gap: 15px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             margin-bottom: 15px;
         }
 
         .checkbox-card:hover {
-            border-color: rgba(102, 126, 234, 0.5);
+            border-color: #6366f1;
             background: rgba(255, 255, 255, 0.05);
-        }
-
-        .checkbox-card input[type="checkbox"] {
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-        }
-
-        .checkbox-label {
-            flex: 1;
         }
 
         .checkbox-title {
             color: white;
             font-weight: 600;
-            margin-bottom: 5px;
+            font-size: 0.9rem;
         }
 
         .checkbox-desc {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
+            color: #64748b;
+            font-size: 0.8rem;
         }
     </style>
 </head>
@@ -392,26 +339,32 @@
             <div class="wizard-step active" data-step="1">
                 <div class="step-title">👋 Bem-vindo ao NetAudit!</div>
                 <div class="step-description">
-                    O NetAudit é sua plataforma completa de gestão de TI. Monitore sua rede, gerencie Active Directory,
-                    acompanhe tickets de suporte e muito mais, tudo em um só lugar.
+                    O NetAudit é sua plataforma completa de gestão de TI. Monitore sua rede, gerencie Active Directory e
+                    Helpdesk em um só lugar.
                 </div>
 
                 <div class="feature-card">
                     <i class="ph-fill ph-network feature-icon"></i>
-                    <div class="feature-title">Monitoramento de Rede</div>
-                    <div class="feature-desc">Escaneie e monitore todos os dispositivos da sua rede em tempo real</div>
+                    <div>
+                        <div class="feature-title">Monitoramento de Rede</div>
+                        <div class="feature-desc">Escaneie e monitore todos os dispositivos em tempo real</div>
+                    </div>
                 </div>
 
                 <div class="feature-card">
                     <i class="ph-fill ph-windows-logo feature-icon"></i>
-                    <div class="feature-title">Gestão Active Directory</div>
-                    <div class="feature-desc">Gerencie usuários, senhas, grupos e permissões diretamente do AD</div>
+                    <div>
+                        <div class="feature-title">Gestão Active Directory</div>
+                        <div class="feature-desc">Gerencie usuários, senhas e grupos diretamente do AD</div>
+                    </div>
                 </div>
 
                 <div class="feature-card">
                     <i class="ph-fill ph-headset feature-icon"></i>
-                    <div class="feature-title">Helpdesk Integrado</div>
-                    <div class="feature-desc">Conecte-se ao GLPI e gerencie tickets de suporte</div>
+                    <div>
+                        <div class="feature-title">Helpdesk Integrado</div>
+                        <div class="feature-desc">Conecte-se ao GLPI para gestão de tickets</div>
+                    </div>
                 </div>
             </div>
 
@@ -419,27 +372,26 @@
             <div class="wizard-step" data-step="2">
                 <div class="step-title"><i class="ph-fill ph-windows-logo"></i> Active Directory</div>
                 <div class="step-description">
-                    Conecte-se ao seu Active Directory para gerenciar usuários, resetar senhas e monitorar eventos de
-                    segurança.
+                    Conecte-se ao seu AD para gerenciar usuários e monitorar eventos de segurança.
                 </div>
 
                 <label class="checkbox-card">
                     <input type="checkbox" id="enableAD" checked>
                     <div class="checkbox-label">
-                        <div class="checkbox-title">Habilitar integração com Active Directory</div>
+                        <div class="checkbox-title">Habilitar integração com AD</div>
                         <div class="checkbox-desc">Recomendado para ambientes corporativos</div>
                     </div>
                 </label>
 
-                <div id="adForm" style="margin-top: 30px;">
+                <div id="adForm">
                     <div class="form-group">
                         <label>Servidor AD (IP ou FQDN)</label>
-                        <input type="text" id="adServer" placeholder="192.168.1.10 ou dc.empresa.local">
+                        <input type="text" id="adServer" placeholder="Ex: 192.168.1.10">
                     </div>
 
                     <div class="form-group">
                         <label>Domínio</label>
-                        <input type="text" id="adDomain" placeholder="empresa.local">
+                        <input type="text" id="adDomain" placeholder="Ex: empresa.local">
                     </div>
 
                     <div class="form-group">
@@ -463,18 +415,18 @@
             <div class="wizard-step" data-step="3">
                 <div class="step-title"><i class="ph-fill ph-headset"></i> Helpdesk (GLPI)</div>
                 <div class="step-description">
-                    Conecte-se ao seu sistema GLPI para gerenciar tickets de suporte diretamente do NetAudit.
+                    Integre seu sistema GLPI para suporte integrado.
                 </div>
 
                 <label class="checkbox-card">
                     <input type="checkbox" id="enableGLPI">
                     <div class="checkbox-label">
                         <div class="checkbox-title">Habilitar integração com GLPI</div>
-                        <div class="checkbox-desc">Opcional - pode ser configurado depois</div>
+                        <div class="checkbox-desc">Opcional - configure agora ou depois</div>
                     </div>
                 </label>
 
-                <div id="glpiForm" style="margin-top: 30px; display: none;">
+                <div id="glpiForm" style="display: none;">
                     <div class="form-group">
                         <label>URL do GLPI</label>
                         <input type="text" id="glpiURL" placeholder="https://helpdesk.empresa.com.br">
@@ -494,34 +446,34 @@
 
             <!-- STEP 4: Conclusão -->
             <div class="wizard-step" data-step="4">
-                <div class="success-icon">
-                    <i class="ph-fill ph-check-circle"></i>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <i class="ph-fill ph-check-circle" style="font-size: 5rem; color: #4ade80;"></i>
                 </div>
                 <div class="step-title" style="text-align: center;">Tudo Pronto!</div>
                 <div class="step-description" style="text-align: center;">
-                    Seu NetAudit está configurado e pronto para uso. Vamos começar?
+                    Seu NetAudit está configurado. Vamos começar a monitorar sua rede?
                 </div>
 
-                <div class="feature-card" style="text-align: center; margin-top: 30px;">
+                <div class="feature-card">
                     <i class="ph-fill ph-rocket-launch feature-icon"></i>
-                    <div class="feature-title">Próximos Passos</div>
-                    <div class="feature-desc">
-                        • Execute seu primeiro scan de rede<br>
-                        • Explore o dashboard com métricas em tempo real<br>
-                        • Configure alertas e notificações
+                    <div>
+                        <div class="feature-title">Próximos Passos</div>
+                        <div class="feature-desc">
+                            • Execute seu primeiro scan de rede<br>
+                            • Explore o dashboard em tempo real
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Navigation -->
-            <div class="wizard-actions">
-                <button class="btn btn-secondary" id="btnPrev" onclick="prevStep()" style="display: none;">
-                    <i class="ph ph-caret-left"></i> Anterior
-                </button>
-                <button class="btn btn-primary" id="btnNext" onclick="nextStep()">
-                    Próximo <i class="ph ph-caret-right"></i>
-                </button>
-            </div>
+        <div class="wizard-actions">
+            <button class="btn btn-secondary" id="btnPrev" onclick="prevStep()" style="display: none;">
+                <i class="ph ph-caret-left"></i> Anterior
+            </button>
+            <button class="btn btn-primary" id="btnNext" onclick="nextStep()">
+                Próximo <i class="ph ph-caret-right"></i>
+            </button>
         </div>
     </div>
 
@@ -543,12 +495,10 @@
             const progress = (currentStep / totalSteps) * 100;
             document.getElementById('progressBar').style.width = progress + '%';
 
-            // Update step dots
             document.querySelectorAll('.step-dot').forEach((dot, index) => {
                 dot.classList.toggle('active', index + 1 === currentStep);
             });
 
-            // Update buttons
             document.getElementById('btnPrev').style.display = currentStep === 1 ? 'none' : 'block';
             const btnNext = document.getElementById('btnNext');
 
@@ -565,7 +515,6 @@
                 return;
             }
 
-            // Validate current step
             if (currentStep === 2 && document.getElementById('enableAD').checked) {
                 if (!validateADForm()) return;
             }
@@ -574,13 +523,9 @@
                 if (!validateGLPIForm()) return;
             }
 
-            // Hide current step
             document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
-
-            // Show next step
             currentStep++;
             document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
-
             updateProgress();
         }
 
@@ -594,9 +539,8 @@
         function validateADForm() {
             const server = document.getElementById('adServer').value;
             const domain = document.getElementById('adDomain').value;
-
             if (!server || !domain) {
-                alert('Por favor, preencha pelo menos o Servidor e Domínio do AD');
+                alert('Por favor, preencha o Servidor e Domínio');
                 return false;
             }
             return true;
@@ -604,7 +548,6 @@
 
         function validateGLPIForm() {
             const url = document.getElementById('glpiURL').value;
-
             if (!url) {
                 alert('Por favor, preencha a URL do GLPI');
                 return false;
@@ -618,7 +561,6 @@
                 tickets_enabled: document.getElementById('enableGLPI').checked
             };
 
-            // Save AD config if enabled
             if (config.ad_enabled) {
                 const adConfig = {
                     server: document.getElementById('adServer').value,
@@ -627,7 +569,6 @@
                     adminUser: document.getElementById('adUser').value,
                     adminPass: document.getElementById('adPass').value
                 };
-
                 await fetch('/api/ad/save-config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -635,14 +576,12 @@
                 });
             }
 
-            // Save GLPI config if enabled
             if (config.tickets_enabled) {
                 const glpiConfig = {
                     url: document.getElementById('glpiURL').value,
                     app_token: document.getElementById('glpiAppToken').value,
                     user_token: document.getElementById('glpiUserToken').value
                 };
-
                 await fetch('/api/glpi/save-config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -650,24 +589,20 @@
                 });
             }
 
-            // Save general settings
             await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)
             });
 
-            // Mark wizard as completed
             await fetch('/api/wizard/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            // Redirect to dashboard
             window.location.href = '/dashboard';
         }
 
-        // Initialize
         updateProgress();
     </script>
 </body>
