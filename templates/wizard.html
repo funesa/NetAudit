@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo ao NetAudit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .wizard-container {
+            width: 90%;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .wizard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wizard-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        .wizard-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: white;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+
+        .wizard-header p {
+            margin: 10px 0 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .wizard-body {
+            padding: 40px;
+        }
+
+        .wizard-step {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .step-title {
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .step-description {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 30px;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+            color: #667eea;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            color: white;
+            margin-bottom: 10px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-desc {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: white;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .step-dot.active {
+            background: #667eea;
+            width: 30px;
+            border-radius: 5px;
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            color: #4ade80;
+            text-align: center;
+            margin: 30px 0;
+            animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .checkbox-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-card:hover {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .checkbox-card input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            flex: 1;
+        }
+
+        .checkbox-title {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .checkbox-desc {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1><i class="ph-fill ph-brain"></i> NetAudit Enterprise</h1>
+            <p>Bem-vindo! Vamos configurar seu sistema em poucos passos</p>
+        </div>
+
+        <div class="wizard-body">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 25%"></div>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <!-- STEP 1: Boas-vindas -->
+            <div class="wizard-step active" data-step="1">
+                <div class="step-title">👋 Bem-vindo ao NetAudit!</div>
+                <div class="step-description">
+                    O NetAudit é sua plataforma completa de gestão de TI. Monitore sua rede, gerencie Active Directory,
+                    acompanhe tickets de suporte e muito mais, tudo em um só lugar.
+                </div>
+
+                <div class="feature-card">
+                    <i class="ph-fill ph-network feature-icon"></i>
+                    <div class="feature-title">Monitoramento de Rede</div>
+                    <div class="feature-desc">Escaneie e monitore todos os dispositivos da sua rede em tempo real</div>
+                </div>
+
+                <div class="feature-card">
+                    <i class="ph-fill ph-windows-logo feature-icon"></i>
+                    <div class="feature-title">Gestão Active Directory</div>
+                    <div class="feature-desc">Gerencie usuários, senhas, grupos e permissões diretamente do AD</div>
+                </div>
+
+                <div class="feature-card">
+                    <i class="ph-fill ph-headset feature-icon"></i>
+                    <div class="feature-title">Helpdesk Integrado</div>
+                    <div class="feature-desc">Conecte-se ao GLPI e gerencie tickets de suporte</div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Active Directory -->
+            <div class="wizard-step" data-step="2">
+                <div class="step-title"><i class="ph-fill ph-windows-logo"></i> Active Directory</div>
+                <div class="step-description">
+                    Conecte-se ao seu Active Directory para gerenciar usuários, resetar senhas e monitorar eventos de
+                    segurança.
+                </div>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" id="enableAD" checked>
+                    <div class="checkbox-label">
+                        <div class="checkbox-title">Habilitar integração com Active Directory</div>
+                        <div class="checkbox-desc">Recomendado para ambientes corporativos</div>
+                    </div>
+                </label>
+
+                <div id="adForm" style="margin-top: 30px;">
+                    <div class="form-group">
+                        <label>Servidor AD (IP ou FQDN)</label>
+                        <input type="text" id="adServer" placeholder="192.168.1.10 ou dc.empresa.local">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Domínio</label>
+                        <input type="text" id="adDomain" placeholder="empresa.local">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Base DN</label>
+                        <input type="text" id="adBaseDN" placeholder="DC=empresa,DC=local">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Usuário Administrador</label>
+                        <input type="text" id="adUser" placeholder="administrador">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="adPass" placeholder="••••••••">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Helpdesk -->
+            <div class="wizard-step" data-step="3">
+                <div class="step-title"><i class="ph-fill ph-headset"></i> Helpdesk (GLPI)</div>
+                <div class="step-description">
+                    Conecte-se ao seu sistema GLPI para gerenciar tickets de suporte diretamente do NetAudit.
+                </div>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" id="enableGLPI">
+                    <div class="checkbox-label">
+                        <div class="checkbox-title">Habilitar integração com GLPI</div>
+                        <div class="checkbox-desc">Opcional - pode ser configurado depois</div>
+                    </div>
+                </label>
+
+                <div id="glpiForm" style="margin-top: 30px; display: none;">
+                    <div class="form-group">
+                        <label>URL do GLPI</label>
+                        <input type="text" id="glpiURL" placeholder="https://helpdesk.empresa.com.br">
+                    </div>
+
+                    <div class="form-group">
+                        <label>App Token</label>
+                        <input type="text" id="glpiAppToken" placeholder="Token da aplicação">
+                    </div>
+
+                    <div class="form-group">
+                        <label>User Token</label>
+                        <input type="text" id="glpiUserToken" placeholder="Token do usuário">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Conclusão -->
+            <div class="wizard-step" data-step="4">
+                <div class="success-icon">
+                    <i class="ph-fill ph-check-circle"></i>
+                </div>
+                <div class="step-title" style="text-align: center;">Tudo Pronto!</div>
+                <div class="step-description" style="text-align: center;">
+                    Seu NetAudit está configurado e pronto para uso. Vamos começar?
+                </div>
+
+                <div class="feature-card" style="text-align: center; margin-top: 30px;">
+                    <i class="ph-fill ph-rocket-launch feature-icon"></i>
+                    <div class="feature-title">Próximos Passos</div>
+                    <div class="feature-desc">
+                        • Execute seu primeiro scan de rede<br>
+                        • Explore o dashboard com métricas em tempo real<br>
+                        • Configure alertas e notificações
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="wizard-actions">
+                <button class="btn btn-secondary" id="btnPrev" onclick="prevStep()" style="display: none;">
+                    <i class="ph ph-caret-left"></i> Anterior
+                </button>
+                <button class="btn btn-primary" id="btnNext" onclick="nextStep()">
+                    Próximo <i class="ph ph-caret-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        // Toggle AD Form
+        document.getElementById('enableAD').addEventListener('change', function () {
+            document.getElementById('adForm').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Toggle GLPI Form
+        document.getElementById('enableGLPI').addEventListener('change', function () {
+            document.getElementById('glpiForm').style.display = this.checked ? 'block' : 'none';
+        });
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+
+            // Update step dots
+            document.querySelectorAll('.step-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index + 1 === currentStep);
+            });
+
+            // Update buttons
+            document.getElementById('btnPrev').style.display = currentStep === 1 ? 'none' : 'block';
+            const btnNext = document.getElementById('btnNext');
+
+            if (currentStep === totalSteps) {
+                btnNext.innerHTML = '<i class="ph ph-check"></i> Concluir';
+            } else {
+                btnNext.innerHTML = 'Próximo <i class="ph ph-caret-right"></i>';
+            }
+        }
+
+        function nextStep() {
+            if (currentStep === totalSteps) {
+                finishWizard();
+                return;
+            }
+
+            // Validate current step
+            if (currentStep === 2 && document.getElementById('enableAD').checked) {
+                if (!validateADForm()) return;
+            }
+
+            if (currentStep === 3 && document.getElementById('enableGLPI').checked) {
+                if (!validateGLPIForm()) return;
+            }
+
+            // Hide current step
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+
+            // Show next step
+            currentStep++;
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+
+            updateProgress();
+        }
+
+        function prevStep() {
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+            currentStep--;
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+            updateProgress();
+        }
+
+        function validateADForm() {
+            const server = document.getElementById('adServer').value;
+            const domain = document.getElementById('adDomain').value;
+
+            if (!server || !domain) {
+                alert('Por favor, preencha pelo menos o Servidor e Domínio do AD');
+                return false;
+            }
+            return true;
+        }
+
+        function validateGLPIForm() {
+            const url = document.getElementById('glpiURL').value;
+
+            if (!url) {
+                alert('Por favor, preencha a URL do GLPI');
+                return false;
+            }
+            return true;
+        }
+
+        async function finishWizard() {
+            const config = {
+                ad_enabled: document.getElementById('enableAD').checked,
+                tickets_enabled: document.getElementById('enableGLPI').checked
+            };
+
+            // Save AD config if enabled
+            if (config.ad_enabled) {
+                const adConfig = {
+                    server: document.getElementById('adServer').value,
+                    domain: document.getElementById('adDomain').value,
+                    baseDN: document.getElementById('adBaseDN').value,
+                    adminUser: document.getElementById('adUser').value,
+                    adminPass: document.getElementById('adPass').value
+                };
+
+                await fetch('/api/ad/save-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(adConfig)
+                });
+            }
+
+            // Save GLPI config if enabled
+            if (config.tickets_enabled) {
+                const glpiConfig = {
+                    url: document.getElementById('glpiURL').value,
+                    app_token: document.getElementById('glpiAppToken').value,
+                    user_token: document.getElementById('glpiUserToken').value
+                };
+
+                await fetch('/api/glpi/save-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(glpiConfig)
+                });
+            }
+
+            // Save general settings
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+
+            // Mark wizard as completed
+            await fetch('/api/wizard/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            // Redirect to dashboard
+            window.location.href = '/dashboard';
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+
+</html>
