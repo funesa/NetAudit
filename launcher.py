@@ -15,7 +15,7 @@ import ctypes
 import subprocess
 import updater
 
-VERSION = "2026.1.2"
+VERSION = "2026.1.3"
 
 # Prevenir abertura de janelas em subprocessos
 CREATE_NO_WINDOW = 0x08000000

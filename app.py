@@ -52,7 +52,7 @@ from ai_actions import ai_bp
 app.register_blueprint(ai_bp)
 
 # --- VERSÃO DO SISTEMA ---
-APP_VERSION = "2026.1.2"
+APP_VERSION = "2026.1.3"
 
 @app.context_processor
 def inject_version():
