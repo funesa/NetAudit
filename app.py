@@ -5,6 +5,9 @@ import subprocess
 import threading
 import time
 import platform
+
+# Prevenir abertura de janelas em subprocessos no Windows
+CREATE_NO_WINDOW = 0x08000000 if platform.system() == 'Windows' else 0
 import json
 import os
 import re
@@ -49,7 +52,7 @@ from ai_actions import ai_bp
 app.register_blueprint(ai_bp)
 
 # --- VERSÃO DO SISTEMA ---
-APP_VERSION = "2026.1.1"
+APP_VERSION = "2026.1.2"
 
 @app.context_processor
 def inject_version():
@@ -99,7 +102,7 @@ def create_desktop_shortcut():
             target = sys.executable
             name = "NetAudit Enterprise.lnk"
             cmd = f"$s=(New-Object -ComObject WScript.Shell).CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), '{name}'));$s.TargetPath='{target}';$s.WorkingDirectory='{os.path.dirname(target)}';$s.Save()"
-            subprocess.run(["powershell", "-Command", cmd], capture_output=True)
+            subprocess.run(["powershell", "-Command", cmd], capture_output=True, creationflags=CREATE_NO_WINDOW)
         except:
             pass
 
@@ -302,7 +305,7 @@ class DeviceIntelligence:
         """Tenta pegar o MAC Address via tabela ARP local"""
         try:
             # Comando arp -a é rápido e não invasivo
-            pid = subprocess.Popen(["arp", "-a", ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            pid = subprocess.Popen(["arp", "-a", ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
             output, _ = pid.communicate(timeout=3)
             output = output.decode('latin-1')
             
@@ -441,7 +444,7 @@ def rdp_gateway_loop():
     print("[RDP GATEWAY] Iniciando serviço auxiliar Node.js...")
     try:
         # Tenta rodar o gateway Node.js
-        subprocess.Popen(["node", "rdp-gateway.js"], shell=True)
+        subprocess.Popen(["node", "rdp-gateway.js"], shell=True, creationflags=CREATE_NO_WINDOW)
     except Exception as e:
         print(f"[RDP GATEWAY] Falha ao iniciar gateway: {e}")
 
@@ -469,7 +472,7 @@ def get_full_audit(ip, user, password):
     param = '-n' if platform.system().lower() == 'windows' else '-c'
     ttl_val = None
     try:
-        proc = subprocess.run(['ping', param, '1', '-w', '500', ip], capture_output=True, text=True, timeout=3)
+        proc = subprocess.run(['ping', param, '1', '-w', '500', ip], capture_output=True, text=True, timeout=3, creationflags=CREATE_NO_WINDOW)
         if proc.returncode != 0: return None
         match = re.search(r"TTL=(\d+)", proc.stdout, re.I)
         if match: ttl_val = int(match.group(1))
@@ -492,7 +495,7 @@ def get_full_audit(ip, user, password):
         try:
             # Tenta autenticar IPC$ antes de rodar o script para garantir acesso
             auth_cmd = f'net use \\\\{ip}\\IPC$ /user:{user} "{password}"'
-            auth_res = subprocess.run(auth_cmd, shell=True, capture_output=True, timeout=3)
+            auth_res = subprocess.run(auth_cmd, shell=True, capture_output=True, timeout=3, creationflags=CREATE_NO_WINDOW)
             
             if auth_res.returncode == 0:
                 info["status_code"] = "ONLINE"
@@ -506,7 +509,7 @@ def get_full_audit(ip, user, password):
                     "-TryFallback"
                 ]
                 
-                audit_proc = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=15)
+                audit_proc = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
                 
                 if audit_proc.returncode == 0 and audit_proc.stdout.strip():
                     try:
@@ -531,7 +534,7 @@ def get_full_audit(ip, user, password):
                     info["errors"].append(f"Script PowerShell falhou (Exit: {audit_proc.returncode})")
                 
                 # Limpa conexão IPC
-                subprocess.run(f"net use \\\\{ip}\\IPC$ /delete /y", shell=True, capture_output=True, timeout=3)
+                subprocess.run(f"net use \\\\{ip}\\IPC$ /delete /y", shell=True, capture_output=True, timeout=3, creationflags=CREATE_NO_WINDOW)
         except Exception as e:
             info["errors"].append(f"Erro na auditoria: {str(e)}")
 

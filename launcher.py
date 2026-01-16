@@ -15,7 +15,10 @@ import ctypes
 import subprocess
 import updater
 
-VERSION = "2026.1.1"
+VERSION = "2026.1.2"
+
+# Prevenir abertura de janelas em subprocessos
+CREATE_NO_WINDOW = 0x08000000
 
 # Configuração para PyInstaller
 def resource_path(relative_path):
@@ -286,7 +289,7 @@ class App(ctk.CTk):
             full_cmd = " & ".join(cmds)
             
             if ctypes.windll.shell32.IsUserAnAdmin():
-                subprocess.run(["cmd", "/c", full_cmd], capture_output=True)
+                subprocess.run(["cmd", "/c", full_cmd], capture_output=True, creationflags=CREATE_NO_WINDOW)
                 self.log(">>> [SUCCESS] Firewall liberado via Netsh (Porta 5000).")
                 tk.messagebox.showinfo("Sucesso", "Regras de Firewall aplicadas com Netsh!")
             else:

@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.1",
+  "latest_version": "2026.1.2",
   "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_System.exe",
-  "release_notes": "Versão 2026.1.1: Novo esquema de data e versão."
+  "release_notes": "Versão 2026.1.2: Correção de janelas pretas (ping/arp) piscando na tela e melhoria na segurança do updater."
 }
