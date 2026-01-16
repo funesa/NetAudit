@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NetAudit{% endblock %}</title>
+
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=31">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}?v=31">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v=23">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clickup-style.css') }}?v=23">
+    <link rel="stylesheet" href="{{ url_for('static', filename='notifications.css') }}?v=1">
+    <style>
+        /* Smooth Dashboard Transitions */
+        .stat-value-dashboard,
+        .activity-item,
+        .alert-item,
+        canvas {
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+        }
+    </style>
+
+    <!-- External Libs -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="with-sidebar">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="ph-fill ph-brain"></i>
+            <span>NetAudit</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+                <i class="ph ph-house"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <!-- Active Directory Group -->
+            {% if general_settings.ad_enabled and session.get('permissions', {}).get('ad', True) %}
+            <div class="nav-group {% if not has_pro_access %}locked-feature{% endif %}">
+                <div class="nav-parent" onclick="toggleMenu(this)">
+                    <i class="ph-fill ph-windows-logo"></i>
+                    <span>Active Directory</span>
+                    {% if not has_pro_access %}<i class="ph-fill ph-lock-key"
+                        style="color:var(--status-error); font-size: 0.8rem; margin-left: 5px;"></i>{% endif %}
+                    <i class="ph-bold ph-caret-right arrow"></i>
+                </div>
+                <div class="nav-children">
+                    <a href="/ad-users" class="nav-item {% if request.path == '/ad-users' %}active{% endif %}">
+                        <i class="ph ph-users"></i>
+                        <span>Usuários AD</span>
+                    </a>
+                    <a href="/ad-shares" class="nav-item {% if request.path == '/ad-shares' %}active{% endif %}">
+                        <i class="ph ph-hard-drives"></i>
+                        <span>Discos e Servidores</span>
+                        <span class="badge-alert" id="badge-disks" style="display: none;"></span>
+                    </a>
+                    <a href="/security" class="nav-item {% if request.path == '/security' %}active{% endif %}">
+                        <i class="ph ph-warning-circle"></i>
+                        <span>Logins Falhados</span>
+                        <span class="badge-alert" id="badge-logins" style="display: none;"></span>
+                    </a>
+                    <a href="/ad-config" class="nav-item {% if request.path == '/ad-config' %}active{% endif %}">
+                        <i class="ph ph-gear"></i>
+                        <span>Configurar AD</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Rede Group -->
+            <div class="nav-group">
+                <div class="nav-parent" onclick="toggleMenu(this)">
+                    <i class="ph-fill ph-globe"></i>
+                    <span>Rede</span>
+                    <i class="ph-bold ph-caret-right arrow"></i>
+                </div>
+                <div class="nav-children">
+                    <a href="/scan" class="nav-item {% if request.path == '/scan' %}active{% endif %}">
+                        <i class="ph ph-scan"></i>
+                        <span>Ativos de Rede</span>
+                    </a>
+                    <a href="/ip-map" class="nav-item {% if request.path == '/ip-map' %}active{% endif %}">
+                        <i class="ph ph-map-pin"></i>
+                        <span>IPs Livres</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Helpdesk Group -->
+            {% if general_settings.tickets_enabled and session.get('permissions', {}).get('helpdesk', True) %}
+            <div class="nav-group {% if not has_pro_access %}locked-feature{% endif %}">
+                <div class="nav-parent" onclick="toggleMenu(this)">
+                    <i class="ph-fill ph-headset"></i>
+                    <span>Helpdesk</span>
+                    {% if not has_pro_access %}<i class="ph-fill ph-lock-key"
+                        style="color:var(--status-error); font-size: 0.8rem; margin-left: 5px;"></i>{% endif %}
+                    <i class="ph-bold ph-caret-right arrow"></i>
+                </div>
+                <div class="nav-children">
+                    <a href="/tickets" class="nav-item {% if request.path == '/tickets' %}active{% endif %}">
+                        <i class="ph ph-ticket"></i>
+                        <span>Chamados</span>
+                        <span class="badge-alert" id="badge-tickets" style="display: none;"></span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Settings Group -->
+            <div class="nav-group" style="margin-top: auto;">
+                <div class="nav-parent" onclick="toggleMenu(this)">
+                    <i class="ph-fill ph-gear"></i>
+                    <span>Configurações</span>
+                    <i class="ph-bold ph-caret-right arrow"></i>
+                </div>
+                <div class="nav-children">
+                    {% if session.get('role') == 'admin' %}
+                    <a href="/settings" class="nav-item {% if request.path == '/settings' %}active{% endif %}">
+                        <i class="ph ph-sliders"></i>
+                        <span>Geral</span>
+                    </a>
+                    {% endif %}
+                    <a href="/settings/users"
+                        class="nav-item {% if request.path == '/settings/users' %}active{% endif %}">
+                        <i class="ph ph-users-three"></i>
+                        <span>Usuários do Sistema</span>
+                    </a>
+                    {% if session.get('is_master') %}
+                    <a href="javascript:void(0)" onclick="confirmUninstall()" class="nav-item" style="color: #fca5a5;">
+                        <i class="ph ph-trash"></i>
+                        <span>Desinstalar Sistema</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            </div>
+        </nav>
+        <div class="sidebar-footer"
+            style="padding: 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Versão {{ app_version }}</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <header class="top-header" style="display: flex; align-items: center;">
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <i class="ph ph-list"></i>
+            </button>
+            <h1>{% block page_title %}NetAudit{% endblock %}</h1>
+
+            <!-- AI Header Trigger & User Info -->
+            <div style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+                <!-- Trial / License Status -->
+                {% if not is_premium %}
+                <div class="status-badge {% if trial_days_left > 0 %}warning{% else %}status-offline{% endif %}"
+                    style="display: flex; align-items: center; gap: 8px; padding: 6px 15px; border-radius: 999px;">
+                    <i class="ph-bold ph-clock-counter-clockwise"></i>
+                    {% if trial_days_left > 0 %}
+                    <span>Trial: {{ trial_days_left }} dias restantes</span>
+                    {% else %}
+                    <span>Versão Gratuita (Expulsa)</span>
+                    {% endif %}
+                    <a href="/license"
+                        style="color: inherit; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 8px; margin-left: 8px; text-decoration: none;">ATIVAR
+                        PRO</a>
+                </div>
+                {% endif %}
+
+                <!-- Atena IA -->
+                {% if general_settings.ai_enabled %}
+                <div class="atena-pill-trigger {% if not has_pro_access %}locked-feature{% endif %}"
+                    onclick="{% if has_pro_access %}toggleAtena(){% else %}location.href='/license'{% endif %}"
+                    title="{% if has_pro_access %}Falar com Atena{% else %}Recurso Premium{% endif %}">
+                    <div class="atena-pill-content">
+                        <i class="ph-fill ph-sparkle atena-pill-icon"></i>
+                        <div class="atena-pill-text-wrapper">
+                            <span class="atena-pill-label">Atena IA {% if not has_pro_access %}<i
+                                    class="ph ph-lock-key"></i>{% endif %}</span>
+                            <span class="atena-pill-hint" id="atena-dynamic-hint">{% if has_pro_access %}Me peça
+                                algo...{% else %}Somente na Versão PRO{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- User Info Pill (Dropdown Trigger) -->
+                <div style="position: relative;">
+                    <div id="userProfileTrigger" onclick="toggleUserDropdown(event)"
+                        style="display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08)); border-radius: 9999px; border: 1px solid rgba(99, 102, 241, 0.25); backdrop-filter: blur(10px); cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);"
+                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(99, 102, 241, 0.2)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(99, 102, 241, 0.1)';">
+
+                        <i class="ph-fill ph-user-circle" style="font-size: 1.6rem; color: var(--primary);"></i>
+
+                        <div style="display: flex; flex-direction: column; line-height: 1.3;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-p);">{{
+                                session.get('username', 'Usuário') }}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-s); opacity: 0.8;">
+                                {{ 'Administrador' if session.get('role') == 'admin' else 'Operador' }}
+                            </span>
+                        </div>
+
+                        <i class="ph-bold ph-caret-down"
+                            style="font-size: 0.9rem; color: var(--text-s); margin-left: 8px;"></i>
+                    </div>
+
+                    <!-- User Dropdown Menu -->
+                    <div id="userDropdown"
+                        style="position: absolute; top: calc(100% + 10px); right: 0; width: 220px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 8px 0; display: none; flex-direction: column; z-index: 9999; overflow: hidden; transform-origin: top right; animation: scaleIn 0.2s ease;">
+
+                        <div
+                            style="padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">CONTA</div>
+                        </div>
+
+                        <a href="#" onclick="openPasswordModal(); return false;" class="dropdown-item"
+                            style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: #e2e8f0; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="ph-bold ph-lock-key" style="color: #6366f1;"></i> Alterar Senha
+                        </a>
+
+                        <a href="javascript:void(0)" onclick="openConfigModal(event)" class="dropdown-item"
+                            style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: #e2e8f0; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="ph-bold ph-link" style="color: #6366f1;"></i> Meus Vínculos (AD/Helpdesk)
+                        </a>
+
+                        <a href="/license" class="dropdown-item"
+                            style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: #e2e8f0; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="ph-bold ph-certificate" style="color: #10b981;"></i> Licença
+                        </a>
+
+                        <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 4px 0;"></div>
+
+                        <a href="/logout" class="dropdown-item"
+                            style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: #ef4444; text-decoration: none; transition: background 0.2s; font-size: 0.9rem;">
+                            <i class="ph-bold ph-sign-out"></i> Sair
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="content-area" style="flex: 1; overflow-y: auto; padding: 24px;">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        function toggleMenu(element) {
+            element.classList.toggle('open');
+            const children = element.nextElementSibling;
+            if (children) {
+                children.classList.toggle('open');
+            }
+        }
+
+        function toggleMobileMenu() {
+            document.querySelector('.sidebar').classList.toggle('mobile-open');
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Auto-open active menu
+            const activeItem = document.querySelector('.nav-children .nav-item.active');
+            if (activeItem) {
+                const group = activeItem.closest('.nav-group');
+                const parent = group.querySelector('.nav-parent');
+                const children = group.querySelector('.nav-children');
+                parent.classList.add('open');
+                children.style.display = 'flex';
+            }
+
+            updateSidebarBadges();
+            setInterval(updateSidebarBadges, 30000); // Check every 30s
+        });
+
+        async function updateSidebarBadges() {
+            try {
+                const res = await fetch('/api/sidebar/alerts');
+                const alerts = await res.json();
+
+                const badgeLogins = document.getElementById('badge-logins');
+                if (alerts.failed_logins > 0) {
+                    badgeLogins.textContent = alerts.failed_logins;
+                    badgeLogins.className = 'badge-alert ' + (alerts.failed_logins_severity || 'warning');
+                    badgeLogins.style.display = 'inline-flex';
+                } else {
+                    badgeLogins.style.display = 'none';
+                }
+
+                const badgeDisks = document.getElementById('badge-disks');
+                const diskCount = (alerts.disk_warnings || 0) + (alerts.offline_servers || 0);
+                if (diskCount > 0) {
+                    badgeDisks.textContent = diskCount;
+                    const severity = (alerts.disk_warnings_severity === 'critical' || alerts.offline_servers_severity === 'critical') ? 'critical' : 'warning';
+                    badgeDisks.className = 'badge-alert ' + severity;
+                    badgeDisks.style.display = 'inline-flex';
+                } else {
+                    badgeDisks.style.display = 'none';
+                }
+            } catch (e) { }
+        }
+    </script>
+    <!-- ATENA IA SIDEBAR -->
+    {% if general_settings.ai_enabled %}
+    <div id="atena-backdrop" class="atena-backdrop" onclick="toggleAtena()"></div>
+
+    <div id="atena-panel" class="atena-panel">
+        <div class="atena-header">
+            <div class="atena-title">
+                <i class="ph-fill ph-sparkle" style="color: #a78bfa;"></i>
+                <span>Atena IA</span>
+            </div>
+            <button class="atena-close" onclick="toggleAtena()">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <div id="atena-chat-area" class="atena-chat-area">
+            <!-- As mensagens vão aparecer aqui -->
+            <div class="atena-message ai">
+                <div class="atena-avatar"><i class="ph-fill ph-sparkle"></i></div>
+                <div class="atena-bubble">
+                    Olá! Sou a Atena. Posso ajudar a gerenciar usuários, verificar IPs ou buscar ativos na rede. Como
+                    posso ajudar?
+                </div>
+            </div>
+        </div>
+
+        <div class="atena-input-area">
+            <input type="text" id="atena-input" placeholder="Digite seu comando..." onkeydown="handleAtenaInput(event)"
+                autocomplete="off">
+            <button class="atena-send" onclick="submitAtenaCommand()">
+                <i class="ph-bold ph-paper-plane-right"></i>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <style>
+        /* ATENA BACKDROP (Fundo desfocado) */
+        .atena-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 9998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .atena-backdrop.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* ATENA SIDE PANEL (Slide da direita) */
+        .atena-panel {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            /* Escondido inicialmente */
+            width: 400px;
+            max-width: 90vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.75);
+            /* Mais transparente para ver o blur */
+            backdrop-filter: blur(20px) saturate(180%);
+            /* Blur forte + saturação */
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            /* Safari */
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6),
+                inset 1px 0 0 rgba(255, 255, 255, 0.1);
+            /* Sombra + brilho interno */
+        }
+
+        .atena-panel.active {
+            right: 0;
+        }
+
+        /* HEADER */
+        .atena-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .atena-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .atena-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+
+        .atena-close:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* CHAT AREA */
+        .atena-chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* MESSAGES */
+        .atena-message {
+            display: flex;
+            gap: 12px;
+            max-width: 90%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .atena-message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .atena-message.user .atena-bubble {
+            background: #6366f1;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .atena-message.ai .atena-bubble {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            border-top-left-radius: 4px;
+        }
+
+        .atena-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+        }
+
+        .atena-message.user .atena-avatar {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .atena-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            word-break: break-word;
+            /* Força quebra se necessário */
+            overflow: hidden;
+            /* Garante que nada saia do balão */
+            position: relative;
+        }
+
+        /* INPUT AREA */
+        .atena-input-area {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        #atena-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            /* Formato Pílula */
+            outline: none;
+            transition: 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        #atena-input:focus {
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+
+        .atena-send {
+            background: #6366f1;
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            min-width: 45px;
+            border-radius: 50%;
+            /* Botão Redondo */
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            padding: 0;
+            /* Remove paddings que podem desalinhado o ícone */
+        }
+
+        .atena-send i {
+            margin-right: -2px;
+            /* Ajuste óptico para o ícone de flecha parecer mais centrado */
+            margin-top: 1px;
+        }
+
+        .atena-send:hover {
+            background: #4f46e5;
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .atena-send:active {
+            transform: scale(0.95);
+        }
+
+        /* CARD STYLES FOR ASSETS INSIDE CHAT */
+        .ai-confirm-text {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            color: #a78bfa;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Candidate List Styling inside Chat */
+        .ai-candidate-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ai-candidate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ai-candidate-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #a78bfa;
+        }
+
+        .candidate-avatar {
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+        }
+
+        .candidate-name {
+            font-size: 0.9rem;
+        }
+
+        .candidate-user {
+            font-size: 0.75rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* HEADER PILL (ATENA TRIGGER) */
+        .atena-pill-trigger {
+            margin-left: auto;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-radius: 99px;
+            padding: 5px 16px 5px 12px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            height: 46px;
+            min-width: 130px;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.05);
+        }
+
+        .atena-pill-trigger:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.5);
+            min-width: 190px;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .atena-pill-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+        }
+
+        .atena-pill-icon {
+            font-size: 1.4rem;
+            color: #c4b5fd;
+            /* Removed static strong filter */
+            animation: soft-glow 4s ease-in-out infinite;
+        }
+
+        .atena-pill-text-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.1;
+        }
+
+        .atena-pill-label {
+            font-weight: 700;
+            color: #f3f4f6;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+
+        .atena-pill-hint {
+            font-size: 0.7rem;
+            color: #a78bfa;
+            opacity: 0.9;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+            display: block;
+            min-width: 120px;
+            /* Space for longer texts */
+        }
+
+        /* Animação Suave "Respirando" */
+        @keyframes soft-glow {
+
+            0%,
+            100% {
+                opacity: 0.7;
+                filter: drop-shadow(0 0 2px rgba(167, 139, 250, 0.2));
+                transform: translateY(0);
+            }
+
+            50% {
+                opacity: 1;
+                filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.6));
+                transform: translateY(-1px);
+                /* Flutuação leve */
+            }
+        }
+    </style>
+
+    <script>
+        // Variáveis de Estado da Atena
+        let atenaPendingAction = null;
+        let atenaPendingParams = null;
+        let atenaInputState = null; // null | 'awaiting_password'
+
+        function toggleAtena() {
+            const backdrop = document.getElementById('atena-backdrop');
+            const panel = document.getElementById('atena-panel');
+            const input = document.getElementById('atena-input');
+            const chatArea = document.getElementById('atena-chat-area');
+
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+                backdrop.classList.remove('active');
+            } else {
+                // Reset Session (New Chat)
+                atenaPendingAction = null;
+                atenaPendingParams = null;
+                atenaInputState = null;
+                input.value = '';
+                input.placeholder = 'Digite seu comando...';
+
+                chatArea.innerHTML = `
+                    <div class="atena-message ai">
+                        <div class="atena-avatar"><i class="ph-fill ph-sparkle"></i></div>
+                        <div class="atena-bubble">
+                            Olá! Sou a Atena. Posso gerenciar usuários do AD ou buscar ativos na rede. Como posso ajudar?
+                        </div>
+                    </div>
+                `;
+
+                panel.classList.add('active');
+                backdrop.classList.add('active');
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        function toggleAiCommand() {
+            toggleAtena();
+        }
+
+        function handleAtenaInput(e) {
+            if (e.key === 'Enter') {
+                submitAtenaCommand();
+            }
+        }
+
+        function addAtenaMessage(text, type, isHtml = false) {
+            const chatArea = document.getElementById('atena-chat-area');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `atena-message ${type}`;
+
+            const icon = type === 'user' ? 'ph-user' : 'ph-sparkle';
+
+            let contentHtml = text;
+            if (!isHtml) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                contentHtml = div.innerHTML;
+            }
+
+            msgDiv.innerHTML = `
+                <div class="atena-avatar"><i class="ph-fill ${icon}"></i></div>
+                <div class="atena-bubble">${contentHtml}</div>
+            `;
+
+            chatArea.appendChild(msgDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        async function submitAtenaCommand(forcedCommand = null) {
+            const input = document.getElementById('atena-input');
+            let command = forcedCommand || input.value.trim();
+
+            if (!command) return;
+
+            // --- Lógica Conversacional (Awaiting Password) ---
+            if (atenaInputState === 'awaiting_password' && !forcedCommand) {
+                // O usuário digitou a senha
+                const newPassword = command;
+                const username = atenaPendingParams.username;
+
+                // Feedback visual (mascara a senha ou mostra asteriscos?)
+                // Vamos mostrar ****** por segurança no chat visual
+                addAtenaMessage('******', 'user');
+                input.value = '';
+
+                // Reconstrói o comando completo
+                const fullCommand = `resetar senha de ${username} para ${newPassword}`;
+
+                // Reseta estado e envia
+                atenaInputState = null;
+                submitAtenaCommand(fullCommand);
+                return;
+            }
+
+            if (!forcedCommand) {
+                addAtenaMessage(command, 'user');
+                input.value = '';
+            }
+
+            // Loader
+            const loaderId = 'loader-' + Date.now();
+            // Evita duplicar loader se chamado recursivamente muito rápido (raro)
+            addAtenaMessage('<i class="ph ph-spinner ph-spin"></i> Processando...', 'ai', true);
+            const loaderMsg = document.getElementById('atena-chat-area').lastElementChild;
+
+            try {
+                const res = await fetch('/api/ai/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: command })
+                });
+
+                const data = await res.json();
+
+                if (loaderMsg) loaderMsg.remove();
+
+                if (data.intent === 'uknown') {
+                    addAtenaMessage(data.message || "Desculpe, não entendi.", 'ai');
+                }
+                else if (data.intent === 'show_info') {
+                    addAtenaMessage(data.description, 'ai', true);
+                }
+                else if (data.intent === 'incomplete_password') {
+                    // Estado de espera de senha
+                    atenaInputState = 'awaiting_password';
+                    atenaPendingParams = data.pending_params; // {username: ...}
+                    addAtenaMessage(data.description, 'ai', true);
+                    input.placeholder = "Digite a nova senha...";
+                    input.focus();
+                }
+                else if (data.intent === 'ambiguous') {
+                    atenaPendingAction = data.pending_action;
+                    atenaPendingParams = data.pending_params;
+
+                    let htmlList = `<div style="margin-bottom: 10px;">${data.description}</div>`;
+                    data.candidates.forEach(c => {
+                        htmlList += `
+                        <div class="ai-candidate-item" onclick="resolveAtena('${c.username}')">
+                            <div class="candidate-avatar"><i class="ph-fill ph-user"></i></div>
+                            <div class="candidate-info">
+                                <div class="candidate-name">${c.name}</div>
+                                <div class="candidate-user">${c.username}</div>
+                            </div>
+                        </div>`;
+                    });
+                    addAtenaMessage(htmlList, 'ai', true);
+                }
+                else {
+                    const html = `
+                        <div>${data.description}</div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button onclick="executeAtena('${data.intent}', '${encodeURIComponent(JSON.stringify(data.params))}', this)" 
+                                style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                                Confirmar
+                            </button>
+                             <button onclick="addAtenaMessage('Cancelado.', 'ai')" 
+                                style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                                Cancelar
+                            </button>
+                        </div>
+                    `;
+                    addAtenaMessage(html, 'ai', true);
+                }
+
+            } catch (err) {
+                if (loaderMsg) loaderMsg.remove();
+                addAtenaMessage('Erro ao comunicar com Atena. Tente novamente.', 'ai');
+            }
+        }
+
+        function resolveAtena(username) {
+            // Verifica se já temos a senha nos params pendentes
+            if (atenaPendingAction === 'reset_password' &&
+                (!atenaPendingParams.password || atenaPendingParams.password === 'null')) {
+
+                // Caso conversacional: Selecionou usuário, mas falta senha
+                atenaPendingParams.username = username;
+                atenaInputState = 'awaiting_password';
+
+                addAtenaMessage(`Selecionado: <strong>${username}</strong>.<br>Qual a nova senha para este usuário?`, 'ai', true);
+                const input = document.getElementById('atena-input');
+                input.placeholder = "Digite a nova senha...";
+                input.focus();
+                return;
+            }
+
+            // Normal flow (parametro já existe)
+            let newCommand = '';
+            if (atenaPendingAction === 'reset_password') {
+                newCommand = `resetar senha de ${username} para ${atenaPendingParams.password}`;
+            } else if (atenaPendingAction === 'unlock_user') {
+                newCommand = `desbloquear usuario ${username}`;
+            } else if (atenaPendingAction === 'disable_user') {
+                newCommand = `desabilitar usuario ${username}`;
+            }
+
+            if (newCommand) {
+                submitAtenaCommand(newCommand);
+            }
+        }
+
+        async function executeAtena(intent, paramsStr, btnElement) {
+            const params = JSON.parse(decodeURIComponent(paramsStr));
+
+            btnElement.textContent = "Executando...";
+            btnElement.disabled = true;
+            btnElement.style.opacity = "0.7";
+
+            try {
+                const res = await fetch('/api/ai/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ intent: intent, params: params })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    addAtenaMessage(`✅ Sucesso: ${result.message}`, 'ai');
+                } else {
+                    addAtenaMessage(`❌ Erro: ${result.message}`, 'ai');
+                }
+                btnElement.parentElement.style.display = 'none';
+
+            } catch (e) {
+                addAtenaMessage('Erro de conexão ao executar.', 'ai');
+            }
+        }
+
+        // Hint Rotation Logic
+        const atenaHints = [
+            "Me peça algo...",
+            "Resetar uma senha?",
+            "Buscar um IP?",
+            "Desbloquear usuário?",
+            "Ver detalhes do PC?",
+            "Qual o host fixo?",
+            "Estou aqui para ajudar ✨"
+        ];
+
+        let atenaHintIndex = 0;
+
+        setInterval(() => {
+            const hintEl = document.getElementById('atena-dynamic-hint');
+            if (hintEl) {
+                // Fade out
+                hintEl.style.opacity = '0';
+
+                setTimeout(() => {
+                    // Change text
+                    atenaHintIndex = (atenaHintIndex + 1) % atenaHints.length;
+                    hintEl.textContent = atenaHints[atenaHintIndex];
+
+                    // Fade in
+                    hintEl.style.opacity = '0.9';
+                }, 300);
+            }
+        }, 4000);
+    </script>
+    <script src="{{ url_for('static', filename='notifications.js') }}?v=1"></script>
+    <!-- PASSWORD CHANGE MODAL -->
+    <div class="modal-overlay" id="passwordModal"
+        style="z-index: 10001; background: rgba(0,0,0,0.5); backdrop-filter: none !important; -webkit-backdrop-filter: none !important;">
+        <div class="premium-glass-card" style="width: 100%; max-width: 420px; text-align: left;">
+            <div style="text-align: center; margin-bottom: 28px;">
+                <div
+                    style="width: 70px; height: 70px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2)); color: #818cf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);">
+                    <i class="ph-bold ph-lock-key" style="font-size: 2.2rem;"></i>
+                </div>
+                <h3
+                    style="font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 6px; letter-spacing: -0.02em;">
+                    Alterar Senha</h3>
+                <p style="color: #94a3b8; font-size: 0.95rem; margin: 0;">Segurança da conta local</p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Senha
+                    Atual</label>
+                <div class="input-wrapper-glass">
+                    <i class="ph-bold ph-key"></i>
+                    <input type="password" id="modalCurrentPassword" placeholder="Digite sua senha atual">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Nova
+                    Senha</label>
+                <div class="input-wrapper-glass">
+                    <i class="ph-bold ph-lock"></i>
+                    <input type="password" id="modalNewPassword" oninput="checkStrength()"
+                        placeholder="Nova senha forte">
+                </div>
+
+                <!-- Strength Bar -->
+                <div
+                    style="height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; border-radius: 2px; overflow: hidden;">
+                    <div id="passwordStrengthBar"
+                        style="height: 100%; width: 0%; background: #ef4444; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
+                    </div>
+                </div>
+                <div id="passwordStrengthText"
+                    style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px; text-align: right; font-weight: 600;">
+                    Muito fraca</div>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+                <label
+                    style="display: block; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Confirmar
+                    Senha</label>
+                <div class="input-wrapper-glass">
+                    <i class="ph-bold ph-check-circle"></i>
+                    <input type="password" id="modalConfirmPassword" placeholder="Repita a nova senha">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <button onclick="closePasswordModal()"
+                    style="padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                    Cancelar
+                </button>
+                <button onclick="submitPasswordChange()" id="btnSavePassword" disabled
+                    style="padding: 12px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; cursor: pointer; font-weight: 600; opacity: 0.5; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transition: all 0.2s;">
+                    Salvar Senha
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CSS Animation for Dropdown
+        const styleSheet = document.createElement("style");
+        styleSheet.textContent = `
+            @keyframes scaleIn {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
+            }
+            .dropdown-item:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            /* Glassmorphism Modal Styles injected */
+            .premium-glass-card {
+                /* Efeito Vidro Real: Gradiente sutil de branco translúcido */
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+                
+                /* Blur + Saturação para destacar as cores do fundo */
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                
+                /* Bordas direcionais para efeito 3D */
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-top: 1px solid rgba(255, 255, 255, 0.25);
+                border-left: 1px solid rgba(255, 255, 255, 0.25);
+                
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                
+                border-radius: 24px;
+                padding: 32px;
+                transform: scale(0.95);
+                transition: all 0.3s ease;
+                animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+
+            @keyframes modalIn {
+                to { transform: scale(1); opacity: 1; }
+            }
+
+            .input-wrapper-glass {
+                position: relative;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                padding: 2px 14px;
+                transition: all 0.2s ease;
+            }
+
+            .input-wrapper-glass:focus-within {
+                background: rgba(0, 0, 0, 0.4);
+                border-color: #6366f1;
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            }
+
+            .input-wrapper-glass i {
+                color: #94a3b8;
+                font-size: 1.2rem;
+                margin-right: 12px;
+            }
+
+            .input-wrapper-glass input {
+                background: transparent !important;
+                border: none !important;
+                color: #fff !important;
+                width: 100%;
+                padding: 12px 0 !important;
+                font-size: 0.95rem;
+                font-weight: 500;
+                outline: none !important;
+                box-shadow: none !important;
+            }
+
+            .input-wrapper-glass input::placeholder {
+                color: #475569;
+                font-weight: 400;
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // Password Modal Logic
+        function openPasswordModal() {
+            // Force flex display to center
+            const modal = document.getElementById('passwordModal');
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+
+            // Hide dropdown
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+
+            document.getElementById('modalCurrentPassword').value = '';
+            document.getElementById('modalNewPassword').value = '';
+            document.getElementById('modalConfirmPassword').value = '';
+            resetStrength();
+        }
+
+        function checkStrength() {
+            const val = document.getElementById('modalNewPassword').value;
+            const bar = document.getElementById('passwordStrengthBar');
+            const txt = document.getElementById('passwordStrengthText');
+            const btn = document.getElementById('btnSavePassword');
+
+            let strength = 0;
+            if (val.length > 5) strength++;
+            if (val.length > 8) strength++;
+            if (/[A-Z]/.test(val)) strength++;
+            if (/[0-9]/.test(val)) strength++;
+            if (/[^A-Za-z0-9]/.test(val)) strength++;
+
+            if (val.length === 0) {
+                bar.style.width = '0%';
+                txt.textContent = 'Muito fraca';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                return;
+            }
+
+            if (strength < 2) {
+                bar.style.width = '20%';
+                bar.style.background = '#ef4444';
+                txt.textContent = 'Fraca';
+            } else if (strength < 4) {
+                bar.style.width = '60%';
+                bar.style.background = '#f59e0b';
+                txt.textContent = 'Média';
+            } else {
+                bar.style.width = '100%';
+                bar.style.background = '#10b981';
+                txt.textContent = 'Forte';
+            }
+
+            // Enable button if basic length met
+            if (strength >= 2) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
+        }
+
+        function resetStrength() {
+            const bar = document.getElementById('passwordStrengthBar');
+            const txt = document.getElementById('passwordStrengthText');
+            bar.style.width = '0%';
+            txt.textContent = 'Muito fraca';
+        }
+
+        async function submitPasswordChange() {
+            const currentPassword = document.getElementById('modalCurrentPassword').value;
+            const newPassword = document.getElementById('modalNewPassword').value;
+            const confirmPassword = document.getElementById('modalConfirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                if (window.Notifier) window.Notifier.warning('Atenção', 'Preencha todos os campos.');
+                else alert('Preencha os campos.');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                if (window.Notifier) window.Notifier.error('Erro', 'As novas senhas não coincidem.');
+                else alert('As senhas não coincidem.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (window.Notifier) window.Notifier.success('Sucesso', data.message);
+                    else alert(data.message);
+                    closePasswordModal();
+                } else {
+                    if (window.Notifier) window.Notifier.error('Erro', data.message);
+                    else alert('Erro: ' + data.message);
+                }
+            } catch (e) {
+                console.error(e);
+                if (window.Notifier) window.Notifier.error('Erro', 'Falha de conexão.');
+                else alert('Falha ao atualizar senha.');
+            }
+        }
+
+        function openConfigModal(e) {
+            if (e) e.preventDefault();
+            const modal = document.getElementById('myConfigModal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.style.opacity = '1', 10);
+
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        function closeConfigModal() {
+            const modal = document.getElementById('myConfigModal');
+            modal.style.opacity = '0';
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function switchConfigTab(type) {
+            document.getElementById('tabContentAD').style.display = type === 'ad' ? 'block' : 'none';
+            document.getElementById('tabContentGLPI').style.display = type === 'glpi' ? 'block' : 'none';
+            document.getElementById('btnTabAD').classList.toggle('active', type === 'ad');
+            document.getElementById('btnTabGLPI').classList.toggle('active', type === 'glpi');
+            document.getElementById('btnTabAD').style.color = type === 'ad' ? '#fff' : '#94a3b8';
+            document.getElementById('btnTabGLPI').style.color = type === 'glpi' ? '#fff' : '#94a3b8';
+        }
+
+        async function saveMyAD() {
+            const data = {
+                server: document.getElementById('myADServer').value,
+                domain: document.getElementById('myADDomain').value,
+                adminUser: document.getElementById('myADUser').value,
+                adminPass: document.getElementById('myADPass').value,
+                baseDN: ""
+            };
+
+            const res = await fetch('/api/user/credentials/ad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (window.Notifier) window.Notifier.success('Sucesso', result.message);
+            else alert(result.message);
+        }
+
+        async function saveMyGLPI() {
+            const data = {
+                url: document.getElementById('myGLPIUrl').value,
+                app_token: document.getElementById('myGLPIApp').value,
+                user_token: document.getElementById('myGLPIUser').value
+            };
+
+            const res = await fetch('/api/user/credentials/glpi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (window.Notifier) window.Notifier.success('Sucesso', result.message);
+            else alert(result.message);
+        }
+
+        // Toggle User Dropdown
+        function toggleUserDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('userDropdown');
+            const isVisible = dropdown.style.display === 'flex';
+            dropdown.style.display = isVisible ? 'none' : 'flex';
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        });
+    </script>
+
+    <!-- MODAL DE MEUS VÍNCULOS (INDIVIDUAL) -->
+    <div class="modal-overlay" id="myConfigModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 11000; align-items: center; justify-content: center;">
+        <div class="premium-glass-card" style="width: 500px; max-width: 95%; padding: 30px; position: relative;">
+            <button onclick="closeConfigModal()"
+                style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem;"><i
+                    class="ph ph-x"></i></button>
+
+            <h2
+                style="margin: 0 0 20px; font-size: 1.4rem; color: #fff; display: flex; align-items: center; gap: 10px;">
+                <i class="ph-fill ph-link" style="color: #6366f1;"></i> Meus Vínculos Individuais
+            </h2>
+
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Configure suas credenciais pessoais para
+                acesso aos serviços externos.</p>
+
+            <div class="tabs-container"
+                style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <button onclick="switchConfigTab('ad')" id="btnTabAD" class="tab-btn active"
+                    style="background: none; border: none; color: #fff; cursor: pointer; padding: 5px 15px; border-radius: 8px; font-weight: 600;">Active
+                    Directory</button>
+                <button onclick="switchConfigTab('glpi')" id="btnTabGLPI" class="tab-btn"
+                    style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 5px 15px; border-radius: 8px; font-weight: 600;">Helpdesk
+                    (GLPI)</button>
+            </div>
+
+            <!-- AD FORM -->
+            <div id="tabContentAD" class="tab-content">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">Servidor DC
+                        (IP ou Nome)</label>
+                    <input type="text" id="myADServer" placeholder="192.168.1.10"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">Domínio (ex:
+                        empresa.local)</label>
+                    <input type="text" id="myADDomain" placeholder="EMPRESA.LOCAL"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">Seu Usuário
+                        AD</label>
+                    <input type="text" id="myADUser" placeholder="pablo.junior"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">Sua Senha
+                        AD</label>
+                    <input type="password" id="myADPass" placeholder="******"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <button onclick="saveMyAD()" class="btn-primary"
+                    style="width: 100%; padding: 12px; border-radius: 12px; margin-top: 10px;">Salvar Vínculo
+                    AD</button>
+            </div>
+
+            <!-- GLPI FORM -->
+            <div id="tabContentGLPI" class="tab-content" style="display: none;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">URL do
+                        GLPI</label>
+                    <input type="text" id="myGLPIUrl" placeholder="https://ajuda.empresa.com"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label
+                        style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">App-Token</label>
+                    <input type="text" id="myGLPIApp" placeholder="xyz..."
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;">User-Token
+                        (Opcional)</label>
+                    <input type="text" id="myGLPIUser" placeholder="abc..."
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: #fff;">
+                </div>
+                <button onclick="saveMyGLPI()" class="btn-primary"
+                    style="width: 100%; padding: 12px; border-radius: 12px; margin-top: 10px;">Salvar Vínculo
+                    Helpdesk</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function confirmUninstall() {
+            if (!confirm("ATENÇÃO: Isso irá apagar TODOS os dados do sistema (banco de dados, logs, configurações e arquivos locais). Esta ação NÃO pode ser desfeita.\n\nDeseja realmente desinstalar o NetAudit Enterprise?")) {
+                return;
+            }
+
+            const confirmCode = prompt("Para confirmar, digite 'APAGAR-TUDO':");
+            if (confirmCode !== 'APAGAR-TUDO') {
+                alert("Código incorreto. Ação cancelada.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/system/uninstall', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = 'about:blank';
+                } else {
+                    alert("Erro: " + data.message);
+                }
+            } catch (e) {
+                alert("Erro ao enviar comando: " + e);
+            }
+        }
+    </script>
+</body>
+
+</html>
