@@ -13,7 +13,7 @@ if os.path.exists("build"):
 if os.path.exists("dist"):
     shutil.rmtree("dist")
 
-print(f"🔨 Iniciando compilacao do {APP_NAME} (Arquivo Único Otimizado)...")
+print(f"🔨 Iniciando compilacao do {APP_NAME} (Modo Onedir Estável)...")
 
 # 3. Argumentos do PyInstaller
 args = [
@@ -49,19 +49,23 @@ args = [
     '--hidden-import=win32com.client',
     '--hidden-import=win32api',
     '--hidden-import=win32con',
+    '--hidden-import=sqlalchemy',
+    '--hidden-import=sqlalchemy.ext.declarative',
+    '--hidden-import=sqlalchemy.orm',
+    '--hidden-import=alembic',
     
     # Coletar todos os subpacotes críticos
     '--collect-all=customtkinter',
     '--collect-all=flask',
     '--collect-all=ldap3',
+    '--collect-all=sqlalchemy',
+    '--collect-all=alembic',
     
     # Excluir módulos desnecessários
     '--exclude-module=tkinter.test',
     '--exclude-module=matplotlib',
     '--exclude-module=scipy',
     '--exclude-module=pytest',
-    '--exclude-module=sqlalchemy',
-    '--exclude-module=alembic',
 ]
 
 # Adicionar ícone se existir

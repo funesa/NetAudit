@@ -43,57 +43,78 @@ def check_for_updates(current_version):
     return False, None, None
 
 def run_update(download_url, latest_version):
-    """Baixa a atualização e executa o script de troca."""
+    """Baixa a atualização (EXE ou ZIP) e executa o script de troca."""
     try:
         # 1. Definir caminhos
         current_exe = sys.executable
-        if not current_exe.endswith(".exe"):
+        if not getattr(sys, 'frozen', False):
             # Para testes em modo dev (.py), não faz nada
             return False
 
-        temp_exe = current_exe.replace(".exe", "_new.exe")
+        is_zip = download_url.lower().endswith(".zip")
+        temp_file = "update.zip" if is_zip else current_exe.replace(".exe", "_new.exe")
         
         # 2. Download
-        response = requests.get(download_url, stream=True, timeout=30)
+        print(f"Baixando atualização de {download_url}...")
+        response = requests.get(download_url, stream=True, timeout=60)
         if response.status_code != 200:
             messagebox.showerror("Erro", f"Servidor de download retornou erro {response.status_code}")
             return False
 
-        with open(temp_exe, "wb") as f:
+        with open(temp_file, "wb") as f:
             first_chunk = True
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
-                    if first_chunk:
-                        # Verifica o cabeçalho 'MZ' de executáveis Windows
+                    if first_chunk and not is_zip:
+                        # Verifica o cabeçalho 'MZ' apenas para executáveis diretos
                         if not chunk.startswith(b'MZ'):
                             messagebox.showerror("Erro", "O download parece corrompido ou inválido (Not a PE file).")
                             f.close()
-                            os.remove(temp_exe)
+                            os.remove(temp_file)
                             return False
-                        first_chunk = False
+                    first_chunk = False
                     f.write(chunk)
         
-        # 3. Criar BAT de substituição
-        # O BAT espera o processo original fechar, deleta, renomeia e reabre.
+        # 3. Criar BAT de substituição robusto
         exe_name = os.path.basename(current_exe)
-        temp_name = os.path.basename(temp_exe)
         
-        bat_content = f"""
+        if is_zip:
+            # Script para extrair ZIP e substituir arquivos (PowerShell)
+            bat_content = f"""
+@echo off
+title Atualizando NetAudit...
+echo Aguardando finalizacao do processo...
+timeout /t 3 /nobreak > NUL
+echo Extraindo arquivos novos...
+powershell -Command "Expand-Archive -Path 'update.zip' -DestinationPath 'temp_update' -Force"
+if errorlevel 1 (
+    echo Erro ao extrair arquivos.
+    pause
+    exit
+)
+echo Substituindo arquivos...
+xcopy /y /s /e "temp_update\\NetAudit_System\\*" "."
+rd /s /q "temp_update"
+del /f /q "update.zip"
+echo Atualizacao concluida para a versão {latest_version}!
+start "" "{exe_name}"
+del "%~f0"
+"""
+        else:
+            # Script clássico para EXE único
+            temp_name = os.path.basename(temp_file)
+            bat_content = f"""
 @echo off
 title Atualizando NetAudit...
 echo Aguardando finalizacao do processo...
 timeout /t 3 /nobreak > NUL
 del /f /q "{exe_name}"
-if exist "{exe_name}" (
-    echo Erro: Nao foi possivel deletar o arquivo original.
-    pause
-    exit
-)
 rename "{temp_name}" "{exe_name}"
 echo Atualizacao concluida para a versão {latest_version}!
 start "" "{exe_name}"
 del "%~f0"
 """
+        
         with open("updater.bat", "w") as bat:
             bat.write(bat_content)
             
