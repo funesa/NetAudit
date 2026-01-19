@@ -29,9 +29,6 @@ args = [
     '--add-data=static;static',
     '--add-data=scripts;scripts',
     
-    # Adicionar DLL do Python explicitamente
-    '--add-binary=C:\\Users\\POFJunior\\AppData\\Local\\Programs\\Python\\Python312\\python312.dll;.',
-    
     # Imports Ocultos Essenciais
     '--hidden-import=engineio.async_drivers.threading',
     '--hidden-import=socketio',
@@ -52,23 +49,19 @@ args = [
     '--hidden-import=win32com.client',
     '--hidden-import=win32api',
     '--hidden-import=win32con',
-    '--hidden-import=sqlalchemy',
-    '--hidden-import=sqlalchemy.ext.declarative',
-    '--hidden-import=sqlalchemy.orm',
-    '--hidden-import=alembic',
     
     # Coletar todos os subpacotes críticos
     '--collect-all=customtkinter',
     '--collect-all=flask',
     '--collect-all=ldap3',
-    '--collect-all=sqlalchemy',
-    '--collect-all=alembic',
     
     # Excluir módulos desnecessários
     '--exclude-module=tkinter.test',
     '--exclude-module=matplotlib',
     '--exclude-module=scipy',
     '--exclude-module=pytest',
+    '--exclude-module=sqlalchemy',
+    '--exclude-module=alembic',
 ]
 
 # Adicionar ícone se existir
