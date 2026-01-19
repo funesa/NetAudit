@@ -19,7 +19,7 @@ print(f"🔨 Iniciando compilacao do {APP_NAME} (Arquivo Único Otimizado)...")
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onefile',                   # Arquivo único
+    '--onedir',                    # DEFINITIVO: onedir é mais confiável
     '--noconsole',                 
     '--clean',
     '--noupx',                     # Desabilita UPX (evita problemas de DLL)
