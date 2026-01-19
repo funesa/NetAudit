@@ -19,7 +19,7 @@ print(f"🔨 Iniciando compilacao do {APP_NAME} (Arquivo Único Otimizado)...")
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onefile',                   # Volta para arquivo único
+    '--onefile',                   # Arquivo único
     '--noconsole',                 
     '--clean',
     '--noupx',                     # Desabilita UPX (evita problemas de DLL)
@@ -28,6 +28,9 @@ args = [
     '--add-data=templates;templates',
     '--add-data=static;static',
     '--add-data=scripts;scripts',
+    
+    # Adicionar DLL do Python explicitamente
+    '--add-binary=C:\\Users\\POFJunior\\AppData\\Local\\Programs\\Python\\Python312\\python312.dll;.',
     
     # Imports Ocultos Essenciais
     '--hidden-import=engineio.async_drivers.threading',
