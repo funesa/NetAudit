@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.4",
+  "latest_version": "2026.1.4.1",
   "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_System.exe",
-  "release_notes": "Versão 2026.1.4: ATUALIZAÇÃO MAJOR - Migração para SQLite, Gestão Segura de Credenciais, Otimizações de Performance e Limpeza de Código. Preparação para Monitoramento em Tempo Real."
+  "release_notes": "Versão 2026.1.4.1: HOTFIX - Corrigido erro de DLL SQLAlchemy. Migração para SQLite, Gestão Segura de Credenciais e Otimizações de Performance."
 }
