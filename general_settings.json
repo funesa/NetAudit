@@ -1,0 +1,6 @@
+{
+  "ai_enabled": true,
+  "ad_enabled": true,
+  "tickets_enabled": true,
+  "dashboard_refresh_interval": 15000
+}

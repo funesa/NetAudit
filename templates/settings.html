@@ -1,0 +1,488 @@
+{% extends "layout.html" %}
+
+{% block title %}Configurações do Sistema - NetAudit{% endblock %}
+{% block page_title %}Configurações do Sistema{% endblock %}
+
+{% block content %}
+<style>
+    .settings-container {
+        padding: 24px 32px;
+        max-width: 900px;
+    }
+
+    .settings-section {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .settings-header {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .settings-header h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 8px 0;
+    }
+
+    .settings-header p {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-text {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .form-select {
+        width: 100%;
+        max-width: 400px;
+        padding: 10px 12px;
+        background: var(--bg-app);
+        border: 1px solid var(--border);
+        border-radius: 9999px;
+        color: var(--text-main);
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-select:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 2px var(--primary-low);
+    }
+
+    .btn-save {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-save:hover {
+        background: var(--primary-dark);
+    }
+
+    .preview-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        background: var(--primary-low);
+        color: var(--primary);
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+
+    /* Premium Confirmation Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+        opacity: 1;
+    }
+
+    .premium-modal {
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        width: 100%;
+        max-width: 450px;
+        padding: 40px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        transform: scale(0.9);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        text-align: center;
+    }
+
+    .modal-overlay.show .premium-modal {
+        transform: scale(1);
+    }
+
+    .modal-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        margin: 0 auto 24px;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 16px;
+        letter-spacing: -0.025em;
+    }
+
+    .modal-body {
+        color: #94a3b8;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        margin-bottom: 32px;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        font-size: 0.95rem;
+    }
+
+    .btn-cancel {
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .btn-confirm-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-confirm-danger:hover {
+        background: #dc2626;
+        box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3);
+        transform: translateY(-2px);
+    }
+
+    /* Toggle Switch Style */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 46px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        transition: .4s;
+        border-radius: 24px;
+        border: 1px solid var(--border);
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked+.slider {
+        background-color: var(--primary);
+        border-color: var(--primary);
+    }
+
+    input:checked+.slider:before {
+        transform: translateX(22px);
+    }
+
+    .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+    }
+
+    .setting-info {
+        flex: 1;
+    }
+</style>
+
+<div class="settings-container">
+    <!-- DASHBOARD SECTION -->
+    <div class="settings-section">
+        <div class="settings-header">
+            <h2><i class="ph-fill ph-monitor-play"></i> Dashboard Automático</h2>
+            <p>Configure como a dashboard inicial se comporta e atualiza em segundo plano.</p>
+        </div>
+
+        <div class="form-group">
+            <label>
+                Intervalo de Atualização Automática
+                <span class="preview-badge" id="currentIntervalBadge">30 seg</span>
+            </label>
+            <select class="form-select" id="refreshInterval">
+                <option value="15000">15 Segundos (Tempo Real)</option>
+                <option value="30000">30 Segundos (Padrão)</option>
+                <option value="60000">1 Minuto</option>
+                <option value="300000">5 Minutos</option>
+                <option value="600000">10 Minutos</option>
+                <option value="1800000">30 Minutos</option>
+                <option value="3600000">1 Hora</option>
+                <option value="0">Desativar Atualização Automática</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- AI SECTION -->
+    <div class="settings-section">
+        <div class="settings-header">
+            <h2><i class="ph-fill ph-sparkle" style="color: #a78bfa;"></i> Inteligência Artificial (Atena IA)</h2>
+            <p>Gerencie a disponibilidade e o comportamento da assistente virtual.</p>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-info">
+                <label style="margin:0;">Habilitar Atena IA</label>
+                <div class="form-text">Quando desativada, a IA ficará oculta e inoperante em todo o sistema.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="aiEnabled" {% if general_settings.ai_enabled %}checked{% endif %}>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- AD SECTION -->
+    <div class="settings-section">
+        <div class="settings-header">
+            <h2><i class="ph-fill ph-microsoft-windows" style="color: #3b82f6;"></i> Servidões e Recursos AD</h2>
+            <p>Controle a integração com o Active Directory e recursos relacionados.</p>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-info">
+                <label style="margin:0;">Habilitar Active Directory (AD)</label>
+                <div class="form-text">Se desativado, todos os menus, cards e ferramentas vinculadas ao AD serão
+                    removidos da interface.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="adEnabled" {% if general_settings.ad_enabled %}checked{% endif %}>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- TICKETS SECTION -->
+    <div class="settings-section">
+        <div class="settings-header">
+            <h2><i class="ph-fill ph-headset" style="color: #ec4899;"></i> Servidões e Recursos Helpdesk</h2>
+            <p>Gerencie a integração com o GLPI e a seção de chamados.</p>
+        </div>
+
+        <div class="setting-item">
+            <div class="setting-info">
+                <label style="margin:0;">Habilitar Helpdesk (GLPI)</label>
+                <div class="form-text">Se desativado, o menu de chamados e os indicadores de tickets na dashboard serão
+                    ocultados.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="ticketsEnabled" {% if general_settings.tickets_enabled %}checked{% endif %}>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+
+
+    <!-- SAVE BUTTON -->
+    <div style="padding: 0 0 40px 0;">
+        <button class="btn-save" onclick="saveSettings()">
+            <i class="ph-bold ph-floppy-disk"></i> Salvar Todas as Configurações
+        </button>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="premium-modal">
+        <div class="modal-icon">
+            <i class="ph-fill ph-warning-octagon"></i>
+        </div>
+        <div class="modal-title">Aviso Crítico</div>
+        <div class="modal-body">
+            Ao desativar este recurso, todas as suas configurações atuais serão <strong>apagadas e
+                desconectadas</strong> permanentemente.
+            <br><br>
+            Uma ativação futura exigirá uma <strong>nova configuração</strong> do zero. Tem certeza que deseja
+            continuar?
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn btn-cancel" onclick="closeConfirmModal()">Cancelar</button>
+            <button class="modal-btn btn-confirm-danger" id="modalConfirmBtn">Sim, Desativar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Carregar configurações salvas ao abrir
+    document.addEventListener('DOMContentLoaded', () => {
+        // O intervalo agora vem do servidor (general_settings), 
+        // mas mantemos o JS para garantir a seleção correta no load.
+        const serverInterval = "{{ general_settings.dashboard_refresh_interval }}";
+        if (serverInterval) {
+            document.getElementById('refreshInterval').value = serverInterval;
+        } else {
+            document.getElementById('refreshInterval').value = "30000";
+        }
+        updateBadge();
+    });
+
+    // Atualizar badge visualmente quando mudar o select
+    document.getElementById('refreshInterval').addEventListener('change', updateBadge);
+
+    // Variáveis para controle do modal
+    let pendingToggle = null;
+
+    // Listeners para os toggles perigosos
+    document.getElementById('adEnabled').addEventListener('click', function (e) {
+        if (!this.checked) {
+            e.preventDefault(); // Impede a mudança imediata
+            showConfirmModal(this);
+        }
+    });
+
+    document.getElementById('ticketsEnabled').addEventListener('click', function (e) {
+        if (!this.checked) {
+            e.preventDefault(); // Impede a mudança imediata
+            showConfirmModal(this);
+        }
+    });
+
+    function showConfirmModal(toggleElement) {
+        pendingToggle = toggleElement;
+        const modal = document.getElementById('confirmModal');
+        modal.classList.add('show');
+
+        document.getElementById('modalConfirmBtn').onclick = () => {
+            pendingToggle.checked = false;
+            closeConfirmModal();
+        };
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.remove('show');
+        pendingToggle = null;
+    }
+
+    function updateBadge() {
+        const select = document.getElementById('refreshInterval');
+        const text = select.options[select.selectedIndex].text;
+        document.getElementById('currentIntervalBadge').textContent = text.replace(/ \(.*?\)/, '');
+    }
+
+    async function saveSettings() {
+        const interval = document.getElementById('refreshInterval').value;
+        const aiEnabled = document.getElementById('aiEnabled').checked;
+        const adEnabled = document.getElementById('adEnabled').checked;
+        const ticketsEnabled = document.getElementById('ticketsEnabled').checked;
+
+        try {
+            // 1. Salvar no LocalStorage (Configurações de UI)
+            localStorage.setItem('dashboard_refresh_interval', interval);
+
+            // 2. Salvar no Servidor (Configurações Gerais)
+            const response = await fetch('/api/settings/general', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ai_enabled: aiEnabled,
+                    ad_enabled: adEnabled,
+                    tickets_enabled: ticketsEnabled,
+                    dashboard_refresh_interval: interval
+                })
+            });
+
+            if (response.ok) {
+                if (window.Notifier) {
+                    window.Notifier.success('Sucesso', 'Configurações aplicadas com sucesso!');
+                } else {
+                    alert('Configurações salvas com sucesso!');
+                }
+
+                // Recarregar para aplicar mudanças globais (menus, dashboard, etc)
+                setTimeout(() => location.reload(), 1000);
+            }
+        } catch (e) {
+            console.error(e);
+            if (window.Notifier) window.Notifier.error('Erro', 'Falha ao salvar no servidor.');
+        }
+    }
+
+
+</script>
+{% endblock %}

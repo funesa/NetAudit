@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Vendedor - NetAudit</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0b0e14 0%, #151921 100%);
+            color: #f0f6fc;
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(21, 25, 33, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2d333b;
+            padding: 32px;
+            border-radius: 20px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #94a3b8;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(21, 25, 33, 0.8);
+            border: 1px solid #2d333b;
+            padding: 24px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-card .label {
+            color: #8b949e;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .stat-card.success .value {
+            color: #34d399;
+        }
+
+        .stat-card.warning .value {
+            color: #f59e0b;
+        }
+
+        .stat-card.info .value {
+            color: #818cf8;
+        }
+
+        .table-container {
+            background: rgba(21, 25, 33, 0.9);
+            border: 1px solid #2d333b;
+            border-radius: 20px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px;
+            border-bottom: 1px solid #2d333b;
+            color: #8b949e;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(45, 51, 59, 0.5);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .badge.expired {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .badge.premium {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="ph-fill ph-crown"></i> Painel do Vendedor</h1>
+            <p>Gestão de Licenças NetAudit Enterprise</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card info">
+                <div class="label">Total de Ativações</div>
+                <div class="value" id="totalActivations">0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="label">Licenças Ativas</div>
+                <div class="value" id="activeLicenses">0</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="label">Licenças Expiradas</div>
+                <div class="value" id="expiredLicenses">0</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2 style="margin-bottom: 24px; font-size: 1.5rem;">Ativações Recentes</h2>
+            <table id="activationsTable">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Data de Ativação</th>
+                        <th>Expira em</th>
+                        <th>Tier</th>
+                        <th>Usuário</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                            Carregando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/vendor/api/stats');
+            const data = await res.json();
+
+            document.getElementById('totalActivations').textContent = data.total_activations;
+            document.getElementById('activeLicenses').textContent = data.active_licenses;
+            document.getElementById('expiredLicenses').textContent = data.expired_licenses;
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (data.recent_activations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">Nenhuma ativação registrada ainda</td></tr>';
+                return;
+            }
+
+            data.recent_activations.reverse().forEach(act => {
+                const expiry = new Date(act.expiry);
+                const isActive = expiry > new Date();
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${act.customer}</strong></td>
+                    <td>${new Date(act.timestamp).toLocaleString('pt-BR')}</td>
+                    <td>${expiry.toLocaleDateString('pt-BR')}</td>
+                    <td><span class="badge premium">${act.license_tier}</span></td>
+                    <td>${act.client_info?.username || 'N/A'}</td>
+                    <td><span class="badge ${isActive ? 'active' : 'expired'}">${isActive ? 'Ativa' : 'Expirada'}</span></td>
+                    <td>
+                        <button onclick="revokeLicense('${act.customer}')" style="background: rgba(248, 81, 73, 0.1); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">
+                            Revogar
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function revokeLicense(customer) {
+            if (!confirm(`Tem certeza que deseja REVOGAR a licença de "${customer}"?\n\nO cliente perderá acesso imediatamente.`)) {
+                return;
+            }
+
+            const res = await fetch('/vendor/api/revoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer: customer })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert('Licença revogada com sucesso!');
+                loadStats();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        }
+
+        loadStats();
+        setInterval(loadStats, 30000); // Atualiza a cada 30s
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,331 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard de Segurança{% endblock %}
+{% block page_title %}Segurança - Tentativas de Login Falhadas{% endblock %}
+
+{% block content %}
+<style>
+    .security-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: var(--bg-panel);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+    }
+
+    .stat-card.danger {
+        border-left-color: #ef4444;
+    }
+
+    .stat-card.warning {
+        border-left-color: #f59e0b;
+    }
+
+    .stat-card.info {
+        border-left-color: #3b82f6;
+    }
+
+    .stat-card.success {
+        border-left-color: #10b981;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .glass-panel {
+        background: var(--bg-panel);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        margin-bottom: 20px;
+    }
+
+    .severity-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .severity-critical {
+        background: rgba(248, 81, 73, 0.1);
+        color: #f85149;
+    }
+
+    .severity-high {
+        background: rgba(210, 153, 34, 0.1);
+        color: #d29922;
+    }
+
+    .severity-medium {
+        background: rgba(210, 153, 34, 0.1);
+        color: #d29922;
+    }
+
+    .severity-low {
+        background: rgba(88, 166, 255, 0.1);
+        color: #58a6ff;
+    }
+
+    .username-highlight {
+        font-family: 'Courier New', monospace;
+        background: var(--bg-hover);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .ip-address {
+        font-family: 'Courier New', monospace;
+        color: var(--primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .glass-panel>div:first-child {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 16px;
+        }
+
+        .glass-panel>div:first-child>div:first-child {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        #hoursFilter {
+            width: 100%;
+        }
+
+        .btn-primary {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<!-- Stats Cards -->
+<div class="security-stats">
+    <div class="stat-card danger">
+        <div class="stat-label"><i class="ph ph-warning-circle"></i> Total de Falhas</div>
+        <div class="stat-value" id="totalFailures">0</div>
+    </div>
+
+    <div class="stat-card warning">
+        <div class="stat-label"><i class="ph ph-users"></i> Usuários Afetados</div>
+        <div class="stat-value" id="uniqueUsers">0</div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-label"><i class="ph ph-desktop"></i> IPs Únicos</div>
+        <div class="stat-value" id="uniqueIPs">0</div>
+    </div>
+
+    <div class="stat-card success">
+        <div class="stat-label"><i class="ph ph-clock"></i> Última Atualização</div>
+        <div class="stat-value" style="font-size: 1.2rem;" id="lastUpdate">--:--</div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='list-layout.css') }}">
+
+<!-- Controls -->
+<div class="list-view-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <label style="color: #64748b; font-weight: 600;">Período:</label>
+            <select id="hoursFilter" onchange="loadFailedLogins()"
+                style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-hover); color: var(--text-main);">
+                <option value="1">Última 1 hora</option>
+                <option value="6">Últimas 6 horas</option>
+                <option value="24" selected>Últimas 24 horas</option>
+                <option value="72">Últimos 3 dias</option>
+                <option value="168">Última semana</option>
+            </select>
+        </div>
+
+        <button class="btn-figma" onclick="loadFailedLogins()">
+            <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="control-container" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+        <div class="input-group" style="border-radius: 9999px;">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="searchFilter" placeholder="Buscar por usuário, IP ou servidor..." autocomplete="off"
+                onkeyup="filterTable()">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <!-- List Header (Desktop Only) -->
+    <div class="list-header grid-security">
+        <div class="list-header-item">Timestamp</div>
+        <div class="list-header-item">Usuário</div>
+        <div class="list-header-item">IP / Estação</div>
+        <div class="list-header-item">Servidor</div>
+        <div class="list-header-item">Motivo da Falha</div>
+        <div class="list-header-item" style="text-align: right;">Severidade</div>
+    </div>
+
+    <!-- Data Container -->
+    <div id="failedLoginsList" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="text-align:center; padding: 60px;">
+            <span style="color: var(--text-secondary);">Clique em Atualizar para carregar...</span>
+        </div>
+    </div>
+
+    <div id="tableStats" style="margin-top: 16px; color: #64748b; font-size: 0.85rem;"></div>
+</div>
+
+<script>
+    let allFailedLogins = [];
+
+    async function loadFailedLogins() {
+        const hours = document.getElementById('hoursFilter').value;
+        const tbody = document.getElementById('failedLoginsList');
+
+        tbody.innerHTML = `
+        <div style="text-align:center; padding: 60px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <i class="ph-bold ph-spinner-gap anim-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 12px;"></i>
+                <span>Analisando logs de segurança...</span>
+            </div>
+        </div>
+    `;
+
+        try {
+            const res = await fetch(`/api/security/failed-logins?hours=${hours}`);
+            const data = await res.json();
+
+            // Handle new API response structure
+            if (data.success === false) {
+                throw new Error(data.error || 'Erro desconhecido');
+            }
+
+            // Extract logins array from response
+            allFailedLogins = data.logins || [];
+            renderTable(allFailedLogins);
+            updateStats(allFailedLogins);
+        } catch (e) {
+            console.error('Erro ao carregar logins falhados:', e);
+            tbody.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Erro ao carregar dados: ${e.message}<br><small>Verifique o console para mais detalhes.</small></div>`;
+        }
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('failedLoginsList');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<div style="text-align:center; padding: 40px; color: #10b981;">
+            <i class="ph-bold ph-check-circle" style="font-size: 2rem;"></i><br>
+            Nenhuma tentativa de login falhada encontrada! 🎉
+        </div>`;
+            return;
+        }
+
+        data.forEach(item => {
+            // Severity Logic
+            let severity = 'low';
+            let severityText = 'Baixa';
+            if (item.FailureReason.includes('Conta bloqueada')) {
+                severity = 'critical'; severityText = 'Crítica';
+            } else if (item.FailureReason.includes('Senha incorreta')) {
+                severity = 'high'; severityText = 'Alta';
+            } else if (item.FailureReason.includes('Usuário não existe')) {
+                severity = 'medium'; severityText = 'Média';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'list-card grid-security';
+            card.innerHTML = `
+                <!-- 1. Timestamp -->
+                <div class="sec-time" style="font-family: monospace; color: var(--text-secondary); font-size: 0.85rem;">
+                    ${item.Timestamp}
+                </div>
+
+                <!-- 2. User -->
+                <div class="sec-user">
+                    <span class="username-highlight" style="font-size: 0.95rem;">${item.Username}</span>
+                </div>
+
+                <!-- 3. Source IP / Workstation -->
+                <div class="sec-ip" style="display: flex; flex-direction: column; font-size: 0.85rem;">
+                     <span style="font-family: monospace; color: var(--primary);">${item.IPAddress || 'N/A'}</span>
+                     <span style="color: var(--text-muted); font-size: 0.75rem;">${item.Workstation || '-'}</span>
+                </div>
+
+                <!-- 4. Server -->
+                <div class="sec-server" style="font-weight: 600; color: var(--text-main); font-size: 0.9rem;">
+                    ${item.Server}
+                </div>
+
+                <!-- 5. Reason -->
+                <div class="sec-reason" style="color: #ef4444; font-weight: 600; font-size: 0.85rem; line-height: 1.3;">
+                    ${item.FailureReason}
+                </div>
+
+                <!-- 6. Severity -->
+                <div class="sec-sev" style="text-align: right;">
+                    <span class="severity-badge severity-${severity}">${severityText}</span>
+                </div>
+            `;
+            tbody.appendChild(card);
+        });
+
+        document.getElementById('tableStats').textContent = `Mostrando ${data.length} tentativa(s) de login falhada(s)`;
+    }
+
+    function updateStats(data) {
+        document.getElementById('totalFailures').textContent = data.length;
+
+        const uniqueUsers = new Set(data.map(x => x.Username)).size;
+        document.getElementById('uniqueUsers').textContent = uniqueUsers;
+
+        const uniqueIPs = new Set(data.map(x => x.IPAddress).filter(x => x && x !== 'N/A')).size;
+        document.getElementById('uniqueIPs').textContent = uniqueIPs;
+
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('pt-BR');
+    }
+
+    function filterTable() {
+        const term = document.getElementById('searchFilter').value.toLowerCase();
+        const filtered = allFailedLogins.filter(item =>
+            item.Username.toLowerCase().includes(term) ||
+            (item.IPAddress && item.IPAddress.toLowerCase().includes(term)) ||
+            item.Server.toLowerCase().includes(term) ||
+            (item.Workstation && item.Workstation.toLowerCase().includes(term))
+        );
+        renderTable(filtered);
+    }
+
+    // Auto load on page load
+    document.addEventListener('DOMContentLoaded', loadFailedLogins);
+
+    // Auto refresh every 5 minutes
+    setInterval(loadFailedLogins, 5 * 60 * 1000);
+</script>
+{% endblock %}

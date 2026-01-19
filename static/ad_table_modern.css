@@ -1,0 +1,199 @@
+/* AD Users Modern Fluid Layout */
+.table-container {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 100%;
+}
+
+#adUsersTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#adUsersTable thead {
+    background: #f8fafc;
+}
+
+#adUsersTable th {
+    padding: 16px;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#adUsersTable tbody tr {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#adUsersTable tbody tr:hover {
+    background-color: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    position: relative;
+}
+
+#adUsersTable td {
+    padding: 16px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+}
+
+/* Email column - allow wrapping */
+#adUsersTable td:nth-child(6) {
+    max-width: 250px;
+    white-space: normal;
+    word-break: break-all;
+}
+
+/* Typography & Content Styling */
+#adUsersTable td strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+#adUsersTable td:nth-child(6) {
+    /* Email */
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+/* Status Badges - Modern Pill Style */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.status-badge.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.active::before {
+    background: #166534;
+}
+
+.status-badge.disabled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.disabled::before {
+    background: #991b1b;
+}
+
+.status-badge.locked {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.locked::before {
+    background: #92400e;
+}
+
+/* Action Button */
+.btn-small {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-small:hover {
+    border-color: #cbd5e1;
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+/* Ocultar colunas: Email, Cargo, Departamento */
+#adUsersTable th:nth-child(4),
+#adUsersTable td:nth-child(4),
+#adUsersTable th:nth-child(5),
+#adUsersTable td:nth-child(5),
+#adUsersTable th:nth-child(6),
+#adUsersTable td:nth-child(6) {
+    display: none !important;
+}
+
+/* Responsive Column Hiding - Progressive System */
+/* Apenas para telas muito pequenas, ocultar Nome Completo também */
+
+@media (max-width: 768px) {
+
+    #adUsersTable th:nth-child(3),
+    #adUsersTable td:nth-child(3) {
+        display: none;
+    }
+
+    /* Aumenta espaço para colunas visíveis */
+    #adUsersTable th:nth-child(1),
+    #adUsersTable td:nth-child(1) {
+        width: 25%;
+    }
+
+    #adUsersTable th:nth-child(2),
+    #adUsersTable td:nth-child(2) {
+        width: 30%;
+    }
+
+    #adUsersTable th:nth-child(7),
+    #adUsersTable td:nth-child(7) {
+        width: 20%;
+    }
+
+    #adUsersTable th:nth-child(8),
+    #adUsersTable td:nth-child(8) {
+        width: 25%;
+    }
+}

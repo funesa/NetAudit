@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - NetAudit</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #818cf8;
+            --primary-hover: #a5b4fc;
+            --background: #0b0e14;
+            --card-bg: rgba(21, 25, 33, 0.95);
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --border: #2d333b;
+            --error: #f85149;
+            --success: #3fb950;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0b0e14 0%, #151921 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Abstract Background Shapes */
+        .bg-shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            background: #6366f1;
+            top: -100px;
+            left: -100px;
+        }
+
+        .shape-2 {
+            width: 300px;
+            height: 300px;
+            background: #a855f7;
+            bottom: -50px;
+            right: -50px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 24px;
+            padding: 48px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow:
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06),
+                0 20px 50px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease;
+        }
+
+        .login-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .app-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: var(--text-main);
+            font-size: 32px;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .app-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            border: 2px solid var(--border);
+            border-radius: 9999px;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-main);
+            background: #22272e;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-input:focus+.input-icon {
+            color: var(--primary);
+        }
+
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: var(--text-main);
+            border: none;
+            border-radius: 9999px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .error-banner {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            color: var(--error);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .error-banner.show {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+
+    <div class="login-card">
+        <div class="card-header">
+            <div class="app-icon">
+                <i class="ph-fill ph-shield-check"></i>
+            </div>
+            <h1 class="app-title">NetAudit Enterprise</h1>
+            <p class="app-subtitle">Log in to access your secure dashboard</p>
+        </div>
+
+        <div id="errorBanner" class="error-banner">
+            <i class="ph-bold ph-warning-circle"></i>
+            <span id="errorText">Credenciais inválidas</span>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="username">Usuário</label>
+                <div class="input-group">
+                    <input type="text" id="username" name="username" class="form-input" placeholder="Digite seu usuário"
+                        autocomplete="username" required autofocus>
+                    <i class="ph-bold ph-user input-icon"></i>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Senha</label>
+                <div class="input-group">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="••••••••"
+                        autocomplete="current-password" required>
+                    <i class="ph-bold ph-lock-key input-icon"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <span>Entrar no Sistema</span>
+                <i class="ph-bold ph-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const errorBanner = document.getElementById('errorBanner');
+            const errorText = document.getElementById('errorText');
+            const loginBtn = document.querySelector('.btn-submit');
+            const card = document.querySelector('.login-card');
+
+            // UI Reset
+            errorBanner.classList.remove('show');
+            card.classList.remove('shake');
+
+            // Loading State
+            loginBtn.disabled = true;
+            const originalBtnContent = loginBtn.innerHTML;
+            loginBtn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Autenticando...';
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput.value,
+                        password: passwordInput.value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Success Animation
+                    loginBtn.innerHTML = '<i class="ph-bold ph-check"></i> Sucesso!';
+                    loginBtn.style.background = 'var(--success)';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 500);
+                } else {
+                    throw new Error(data.message || 'Usuário ou senha inválidos');
+                }
+            } catch (error) {
+                // Error Handling
+                errorText.textContent = error.message;
+                errorBanner.classList.add('show');
+                card.classList.add('shake');
+
+                // Reset Button
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = originalBtnContent;
+                loginBtn.style.background = null;
+
+                // Focus password for quick retry
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        });
+    </script>
+</body>
+
+</html>

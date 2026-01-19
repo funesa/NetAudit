@@ -1,0 +1,24 @@
+[
+  {
+    "username": "suporte",
+    "password": "gAAAAABpaRqDm0jDKIYhluOFleXlcencp3i1XkSa-kq2TAafYY4A-fzP2gP30o6DgedkKrv-Jh4rXrcja1ovSlyKnBp3dNeOfw==",
+    "role": "admin"
+  },
+  {
+    "username": "pablo",
+    "password": "gAAAAABpaRqDA4SjuXL1JEeeLOpdSZK2eCuozu8CkpChQrA_wQ2D0FkZnE20CBiWgOB4n6UDsBjWQH8wFBpz-cw0kETNuav7jg==",
+    "role": "user"
+  },
+  {
+    "username": "Teste",
+    "password": "gAAAAABpaRqDO0NanMhqQ6Qu1h3qlW-FbentJH26O8AcbU-2zjZxDQFQ_zbv-4fV-pEKmU58vYeEbPbQyF3iBbMckxebiYHBzg==",
+    "role": "user",
+    "is_master": false,
+    "is_active": true,
+    "permissions": {
+      "type": "exec",
+      "ad": true,
+      "helpdesk": true
+    }
+  }
+]

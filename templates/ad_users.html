@@ -1,0 +1,1730 @@
+{% extends "layout.html" %}
+
+{% block title %}Usuários AD - NetAudit{% endblock %}
+{% block page_title %}Gerenciamento de Usuários AD{% endblock %}
+
+{% block content %}
+
+
+<!-- Dashboard de Saúde do AD -->
+<section class="metrics-grid">
+    <div class="metric-card-modern primary">
+        <div class="metric-icon">
+            <i class="ph-fill ph-users"></i>
+        </div>
+        <div class="metric-content">
+            <span class="metric-label">Total de Usuários</span>
+            <span id="statTotal" class="metric-value">--</span>
+        </div>
+    </div>
+
+    <div class="metric-card-modern success">
+        <div class="metric-icon">
+            <i class="ph-fill ph-user-circle-plus"></i>
+        </div>
+        <div class="metric-content">
+            <span class="metric-label">Usuários Ativos</span>
+            <span id="statActiveCount" class="metric-value">--</span>
+        </div>
+    </div>
+
+    <div class="metric-card-modern warning">
+        <div class="metric-icon">
+            <i class="ph-fill ph-user-minus"></i>
+        </div>
+        <div class="metric-content">
+            <span class="metric-label">Desabilitados</span>
+            <span id="statDisabled" class="metric-value">--</span>
+        </div>
+    </div>
+
+    <div class="metric-card-modern info">
+        <div class="metric-icon">
+            <i class="ph-fill ph-clock-user"></i>
+        </div>
+        <div class="metric-content">
+            <span class="metric-label">Inativos (+90 dias)</span>
+            <span id="statInactive" class="metric-value">--</span>
+        </div>
+    </div>
+</section>
+
+<!-- Top Control Bar (Search & Filters separated) -->
+<div class="filters-container">
+    <div class="control-bar-users">
+        <div class="input-group-users">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="searchUser" class="user-search-input" autocomplete="off"
+                placeholder="Buscar usuário por nome, email...">
+        </div>
+
+        <!-- ROW 2: Filters & Actions (Right Aligned) -->
+        <div class="actions-group-users">
+
+            <div class="filters-wrapper">
+                <!-- Dept Filter -->
+                <div class="select-wrapper department-select">
+                    <select id="filterDepartment" class="pill-select">
+                        <option value="">Todos os Departamentos</option>
+                    </select>
+                    <i class="ph-bold ph-caret-down select-arrow"></i>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="select-wrapper status-select">
+                    <select id="filterStatus" class="pill-select">
+                        <option value="">Status</option>
+                        <option value="active">Ativos</option>
+                        <option value="disabled">Desabilitados</option>
+                        <option value="locked">Bloqueados</option>
+                    </select>
+                    <i class="ph-bold ph-caret-down select-arrow"></i>
+                </div>
+            </div>
+
+            <!-- Refresh Button -->
+            <button onclick="refreshUsers()" class="btn-refresh-pill">
+                <i class="ph-bold ph-arrows-clockwise"></i> <span class="hide-mobile-text">Atualizar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* OVERRIDE GLOBAL MAIN WIDTH for this page only */
+    .content-area,
+    main {
+        max-width: 100% !important;
+        padding: 20px 40px !important;
+    }
+</style>
+
+<style>
+    .modern-wrapper {
+        background: var(--bg-panel);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        margin-top: 16px;
+        width: 100%;
+        animation: fadeIn 0.4s ease-out;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<style>
+    /* --- SMOOTH ANIMATIONS & UI POLISH --- */
+    .modal-overlay {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        display: none;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        pointer-events: auto;
+    }
+
+    .modal-overlay.open {
+        opacity: 1;
+    }
+
+    .modal-premium {
+        transform: scale(0.95) translateY(10px);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.open .modal-premium {
+        transform: scale(1) translateY(0);
+    }
+
+    @keyframes rowFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .user-row {
+        opacity: 0;
+        animation: rowFadeIn 0.4s ease forwards;
+    }
+
+    .anim-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Legacy Card Styles (for backward compatibility if needed) */
+    .uc-card {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-panel);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        transition: all 0.2s;
+        margin-bottom: 20px;
+    }
+</style>
+</style>
+
+<!-- Import Premium Modal Styles -->
+<link rel="stylesheet" href="{{ url_for('static', filename='premium-modal.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='list-layout.css') }}">
+
+<!-- Users List Container (Cards) -->
+<div id="usersList" class="list-view-container" style="margin-top: 24px;">
+    <!-- Populated by JS -->
+</div>
+
+<!-- Modal Detalhes do Usuário (PREMIUM REDESIGN) -->
+<div class="modal-overlay" id="userDetailModal">
+    <div class="modal-premium" style="width: 900px; max-width: 95vw;">
+        <!-- Hero Header -->
+        <div class="modal-hero">
+            <div class="hero-icon-wrapper">
+                <i class="ph-fill ph-user-circle" style="color: var(--primary);"></i>
+            </div>
+            <div class="hero-content">
+                <h2 id="detailUsername">--</h2>
+                <div class="hero-subtitle" id="detailStatus">
+                    <!-- Status Badge will go here -->
+                </div>
+            </div>
+            <div class="hero-actions">
+                <!-- Botão Desbloquear (Aparece via JS se bloqueado) -->
+                <button id="btnUnlock" onclick="unlockUser()" class="btn-small unlock-variant pulse"
+                    title="A conta parece estar bloqueada no AD. Clique para desbloquear.">
+                    <i class="ph-bold ph-lock-key-open"></i> Desbloquear
+                </button>
+
+                <!-- Botão Mudar Status (Preenchido dinamicamente via JS) -->
+                <button id="btnToggleStatus" onclick="toggleUserStatus()" class="btn-small"
+                    title="Clique para habilitar ou desabilitar este usuário">
+                    <i class="ph-bold" id="toggleStatusIcon"></i>
+                    <span id="toggleStatusText">Status</span>
+                </button>
+
+                <!-- Botão Fechar -->
+                <button class="btn-icon-close" onclick="closeDetailModal()" title="Fechar Detalhes">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body-premium">
+            <!-- Informações Pessoais -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-identification-card"></i> Informações Pessoais
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium highlight-user">
+                        <span class="data-label"><i class="ph ph-user"></i> Nome Completo</span>
+                        <span class="data-value view-mode" id="detailName">-</span>
+                        <input type="text" class="edit-mode" id="editName"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-envelope"></i> Email</span>
+                        <span class="data-value view-mode" id="detailEmail">-</span>
+                        <input type="text" class="edit-mode" id="editEmail"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-phone"></i> Telefone</span>
+                        <span class="data-value view-mode" id="detailPhone">-</span>
+                        <input type="text" class="edit-mode" id="editPhone"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-device-mobile"></i> Celular</span>
+                        <span class="data-value view-mode" id="detailMobile">-</span>
+                        <input type="text" class="edit-mode" id="editMobile"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organizacional -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-buildings"></i> Organizacional
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-briefcase"></i> Departamento</span>
+                        <span class="data-value view-mode" id="detailDept">-</span>
+                        <input type="text" class="edit-mode" id="editDept"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-medal"></i> Cargo</span>
+                        <span class="data-value view-mode" id="detailTitle">-</span>
+                        <input type="text" class="edit-mode" id="editTitle"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-building"></i> Empresa</span>
+                        <span class="data-value view-mode" id="detailCompany">-</span>
+                        <input type="text" class="edit-mode" id="editCompany"
+                            style="display:none; width:100%; padding:4px; border:1px solid var(--border); border-radius:4px; background: var(--bg-hover); color: var(--text-main);">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-map-pin"></i> Escritório</span>
+                        <span class="data-value" id="detailOffice">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-user-focus"></i> Gerente</span>
+                        <span class="data-value" id="detailManager">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conta e Grupos -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-shield-check"></i> Dados da Conta
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-clock"></i> Último Login</span>
+                        <span class="data-value" id="detailLastLogin" style="font-weight: 700;">-</span>
+                    </div>
+
+                    <!-- NEW: Detected Machine -->
+                    <div class="data-item-premium">
+                        <span class="data-label" style="color:var(--primary);"><i class="ph-bold ph-desktop"></i>
+                            Máquina (Scan)</span>
+                        <span class="data-value" id="detailMachine"
+                            style="font-weight: 600; color:var(--primary);">-</span>
+                    </div>
+
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-calendar"></i> Criado em</span>
+                        <span class="data-value" id="detailCreated">-</span>
+                    </div>
+                    <div class="data-item-premium" style="grid-column: span 3;">
+                        <span class="data-label"><i class="ph ph-text-aa"></i> Descrição</span>
+                        <span class="data-value" id="detailDesc">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-header" style="display:flex; justify-content:space-between;">
+                    <span><i class="ph-bold ph-users-three"></i> Membro de Grupos</span>
+                    <button onclick="openGroupAdd()" class="btn-small edit-mode"
+                        style="display:none; font-size:0.7rem;">+ Adicionar</button>
+                </div>
+                <div id="groupAddContainer" class="edit-mode" style="display:none; margin-bottom: 10px; gap: 8px;">
+                    <select id="groupSelect"
+                        style="padding: 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-main);"></select>
+                    <button onclick="confirmAddGroup()" class="btn-small"
+                        style="background:var(--primary); color:white;">OK</button>
+                </div>
+                <div id="detailGroups" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+
+            <!-- Ações Principais -->
+            <div
+                style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 20px;">
+                <div style="display:flex; gap:12px;">
+                    <button id="btnEditUser" onclick="toggleEditMode()" class="btn-secondary"
+                        style="padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-hover); cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+                        <i class="ph-bold ph-pencil"></i> Editar Dados
+                    </button>
+                    <button id="btnSaveUser" onclick="saveUserUpdates()" class="btn-primary-glow"
+                        style="display:none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; align-items: center; gap: 8px;">
+                        <i class="ph-bold ph-check"></i> Salvar
+                    </button>
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button onclick="closeDetailModal()" class="btn-secondary"
+                        style="padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-hover); cursor: pointer; font-weight: 600; color: var(--text-main);">Fechar</button>
+                    <button id="btnResetModal" onclick="openResetModal(currentUserDetail.username)"
+                        style="padding: 10px 24px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px var(--primary-glow);">
+                        <i class="ph-bold ph-lock-key"></i> Resetar Senha
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Reset Senha (Simplificado para manter estilo) -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal-premium" style="width: 450px; height: auto; padding: 0;">
+        <div class="modal-hero" style="padding: 20px;">
+            <div class="hero-content">
+                <h2 style="font-size: 1.25rem;">Resetar Senha</h2>
+                <div class="hero-subtitle">Defina uma nova senha para <strong id="resetUsername"
+                        style="margin-left: 5px;"></strong></div>
+            </div>
+            <div class="hero-actions">
+                <button class="btn-icon-close" onclick="closeResetModal()">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+        <div class="modal-body-premium" style="padding: 24px;">
+            <div class="input-group" style="margin-bottom: 16px;">
+                <i class="ph ph-lock"></i>
+                <input type="password" id="newPassword" placeholder="Nova senha">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 20px;">
+                <i class="ph ph-lock"></i>
+                <input type="password" id="confirmPassword" placeholder="Confirmar senha">
+            </div>
+
+            <div id="resetError" class="error-msg"
+                style="display: none; color: var(--status-error); font-size: 0.85rem; margin-bottom: 10px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+            </div>
+
+            <button id="btnConfirmReset" onclick="resetPassword()"
+                style="width: 100%; padding: 12px; justify-content: center; background: var(--primary); color: white; font-weight: 600; border-radius: 8px; border: none; cursor: pointer;">
+                <i class="ph-bold ph-check"></i> Confirmar Alteração
+            </button>
+
+            <!-- Success State (Hidden by default) -->
+            <div id="resetSuccess"
+                style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; position: absolute; top: 0; left: 0; width: 100%; background: #10B981; border-radius: 12px; z-index: 10;">
+                <div class="checkmark-circle">
+                    <div class="background"></div>
+                    <div class="checkmark draw"></div>
+                </div>
+                <h3 style="color: white; margin-top: 20px; font-size: 1.5rem;">Senha Alterada!</h3>
+                <p style="color: rgba(255,255,255,0.9); margin-top: 5px;">Operação realizada com sucesso.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Restore Status Badge CSS for Main Table */
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-badge.active {
+        background: rgba(63, 185, 80, 0.15);
+        color: #3fb950;
+        border: 1px solid rgba(63, 185, 80, 0.25);
+    }
+
+    .status-badge.disabled {
+        background: rgba(248, 81, 73, 0.15);
+        color: #f85149;
+        border: 1px solid rgba(248, 81, 73, 0.25);
+    }
+
+    .status-badge.locked {
+        background: rgba(210, 153, 34, 0.15);
+        color: #d29922;
+        border: 1px solid rgba(210, 153, 34, 0.25);
+    }
+
+    /* Checkmark Animation CSS */
+    .checkmark-circle {
+        width: 80px;
+        height: 80px;
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    .checkmark-circle .background {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--bg-hover);
+        position: absolute;
+    }
+
+    .checkmark-circle .checkmark {
+        border-radius: 5px;
+    }
+
+    .checkmark-circle .checkmark.draw:after {
+        animation-delay: 100ms;
+        animation-duration: 1s;
+        animation-timing-function: ease;
+        animation-name: checkmark;
+        transform: scaleX(-1) rotate(135deg);
+        animation-fill-mode: forwards;
+    }
+
+    .checkmark-circle .checkmark:after {
+        opacity: 1;
+        height: 40px;
+        width: 20px;
+        transform-origin: left top;
+        border-right: 4px solid #10B981;
+        border-top: 4px solid #10B981;
+        content: '';
+        left: 20px;
+        top: 40px;
+        position: absolute;
+    }
+
+    @keyframes checkmark {
+        0% {
+            height: 0;
+            width: 0;
+            opacity: 1;
+        }
+
+        20% {
+            height: 0;
+            width: 20px;
+            opacity: 1;
+        }
+
+        40% {
+            height: 40px;
+            width: 20px;
+            opacity: 1;
+        }
+
+        100% {
+            height: 40px;
+            width: 20px;
+            opacity: 1;
+        }
+    }
+
+    /* --- SMOOTH ANIMATIONS & UI POLISH --- */
+
+    /* Modal Transitions */
+    .modal-overlay {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        /* Prevent clicks when hidden opacity 0 */
+        display: none;
+        /* Fallback */
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        /* Changed from none */
+        pointer-events: auto;
+    }
+
+    .modal-overlay.open {
+        opacity: 1;
+    }
+
+    .modal-premium {
+        transform: scale(0.95) translateY(10px);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Premium 'Out Expo' like ease */
+    }
+
+    .modal-overlay.open .modal-premium {
+        transform: scale(1) translateY(0);
+    }
+
+    /* Table Row Stagger Animation */
+    @keyframes rowFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .user-row {
+        opacity: 0;
+        /* Start hidden */
+        animation: rowFadeIn 0.4s ease forwards;
+    }
+
+    /* Loading Spinner Styling */
+    .anim-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* --- MOBILE & DESKTOP CARD LAYOUT STYLES --- */
+    .uc-card {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-panel);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .uc-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        border-color: #cbd5e1;
+    }
+
+    /* Header */
+    .uc-header {
+        padding: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        gap: 16px;
+    }
+
+    .uc-header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .uc-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--primary-light);
+        color: var(--primary);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .uc-name {
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 1.15rem;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .uc-subname {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 2px;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Info Grid */
+    .uc-info {
+        padding: 24px;
+        background: var(--bg-hover);
+        border-bottom: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 20px;
+    }
+
+    .uc-info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .uc-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .uc-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Footer */
+    .uc-footer {
+        padding: 16px 24px;
+        background: var(--bg-panel);
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-details {
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-details:hover {
+        background: #f8fafc;
+        color: var(--primary);
+        border-color: var(--primary);
+    }
+
+    @media (max-width: 600px) {
+        .uc-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .uc-header-left {
+            width: 100%;
+        }
+
+        /* Keep status badge absolute or flexed depending on pref, here standard flow */
+        .uc-footer {
+            justify-content: space-between;
+        }
+
+        .uc-info {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    #searchUser,
+    input[type="text"],
+    input[type="password"] {
+        /* Reset defaults */
+        color: var(--text-main);
+        outline: none;
+        font-size: 0.95rem;
+    }
+</style>
+
+<!-- Import Premium Modal Styles -->
+<link rel="stylesheet" href="{{ url_for('static', filename='premium-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='list-layout.css') }}">
+
+<!-- Users List Container (Cards) -->
+<div id="usersList" class="list-view-container" style="margin-top: 24px;">
+    <!-- Populated by JS -->
+</div>
+
+<!-- Modal Detalhes do Usuário (PREMIUM REDESIGN) -->
+<div class="modal-overlay" id="userDetailModal">
+    <div class="modal-premium" style="width: 900px; max-width: 95vw;">
+        <!-- Hero Header -->
+        <div class="modal-hero">
+            <div class="hero-icon-wrapper">
+                <i class="ph-fill ph-user-circle" style="color: var(--primary);"></i>
+            </div>
+            <div class="hero-content">
+                <h2 id="detailUsername">--</h2>
+                <div class="hero-subtitle" id="detailStatus">
+                    <!-- Status Badge will go here -->
+                </div>
+            </div>
+            <div class="hero-actions">
+                <!-- Action Buttons: Unlock & Toggle -->
+                <button id="btnUnlock" onclick="unlockUser()" class="btn-small"
+                    style="display:none; background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; margin-right: 8px;">
+                    <i class="ph-bold ph-lock-key-open"></i> Desbloquear
+                </button>
+
+                <button id="btnToggleStatus" onclick="toggleUserStatus()" class="btn-small"
+                    style="background: var(--bg-hover); border: 1px solid var(--border); margin-right: 8px; color: var(--text-main);">
+                    <!-- Icon set dynamically -->
+                </button>
+
+                <button class="btn-icon-close" onclick="closeDetailModal()">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body-premium">
+            <!-- Informações Pessoais -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-identification-card"></i> Informações Pessoais
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium highlight-user">
+                        <span class="data-label"><i class="ph ph-user"></i> Nome Completo</span>
+                        <span class="data-value view-mode" id="detailName">-</span>
+                        <input type="text" class="edit-mode" id="editName"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-envelope"></i> Email</span>
+                        <span class="data-value view-mode" id="detailEmail">-</span>
+                        <input type="text" class="edit-mode" id="editEmail"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-phone"></i> Telefone</span>
+                        <span class="data-value view-mode" id="detailPhone">-</span>
+                        <input type="text" class="edit-mode" id="editPhone"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-device-mobile"></i> Celular</span>
+                        <span class="data-value view-mode" id="detailMobile">-</span>
+                        <input type="text" class="edit-mode" id="editMobile"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organizacional -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-buildings"></i> Organizacional
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-briefcase"></i> Departamento</span>
+                        <span class="data-value view-mode" id="detailDept">-</span>
+                        <input type="text" class="edit-mode" id="editDept"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-medal"></i> Cargo</span>
+                        <span class="data-value view-mode" id="detailTitle">-</span>
+                        <input type="text" class="edit-mode" id="editTitle"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-building"></i> Empresa</span>
+                        <span class="data-value view-mode" id="detailCompany">-</span>
+                        <input type="text" class="edit-mode" id="editCompany"
+                            style="display:none; width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-map-pin"></i> Escritório</span>
+                        <span class="data-value" id="detailOffice">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-user-focus"></i> Gerente</span>
+                        <span class="data-value" id="detailManager">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conta e Grupos -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-shield-check"></i> Dados da Conta
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-clock"></i> Último Login</span>
+                        <span class="data-value" id="detailLastLogin" style="font-weight: 700;">-</span>
+                    </div>
+
+                    <!-- NEW: Detected Machine -->
+                    <div class="data-item-premium">
+                        <span class="data-label" style="color:var(--primary);"><i class="ph-bold ph-desktop"></i>
+                            Máquina (Scan)</span>
+                        <span class="data-value" id="detailMachine"
+                            style="font-weight: 600; color:var(--primary);">-</span>
+                    </div>
+
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-calendar"></i> Criado em</span>
+                        <span class="data-value" id="detailCreated">-</span>
+                    </div>
+                    <div class="data-item-premium" style="grid-column: span 3;">
+                        <span class="data-label"><i class="ph ph-text-aa"></i> Descrição</span>
+                        <span class="data-value" id="detailDesc">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-header" style="display:flex; justify-content:space-between;">
+                    <span><i class="ph-bold ph-users-three"></i> Membro de Grupos</span>
+                    <button onclick="openGroupAdd()" class="btn-small edit-mode"
+                        style="display:none; font-size:0.7rem;">+ Adicionar</button>
+                </div>
+                <div id="groupAddContainer" class="edit-mode" style="display:none; margin-bottom: 10px; gap: 8px;">
+                    <select id="groupSelect" style="padding: 6px; border-radius: 6px; border: 1px solid #ddd;"></select>
+                    <button onclick="confirmAddGroup()" class="btn-small"
+                        style="background:var(--primary); color:white;">OK</button>
+                </div>
+                <div id="detailGroups" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+
+            <!-- Ações Principais -->
+            <div
+                style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <div style="display:flex; gap:12px;">
+                    <button id="btnEditUser" onclick="toggleEditMode()" class="btn-secondary"
+                        style="padding: 10px 24px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <i class="ph-bold ph-pencil"></i> Editar Dados
+                    </button>
+                    <button id="btnSaveUser" onclick="saveUserUpdates()" class="btn-primary-glow"
+                        style="display:none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; align-items: center; gap: 8px;">
+                        <i class="ph-bold ph-check"></i> Salvar
+                    </button>
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button onclick="closeDetailModal()" class="btn-secondary"
+                        style="padding: 10px 24px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; font-weight: 600;">Fechar</button>
+                    <button id="btnResetModal" onclick="openResetModal(currentUserDetail.username)"
+                        style="padding: 10px 24px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px var(--primary-glow);">
+                        <i class="ph-bold ph-lock-key"></i> Resetar Senha
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Reset Senha (Simplificado para manter estilo) -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal-premium" style="width: 450px; height: auto; padding: 0;">
+        <div class="modal-hero" style="padding: 20px;">
+            <div class="hero-content">
+                <h2 style="font-size: 1.25rem;">Resetar Senha</h2>
+                <div class="hero-subtitle">Defina uma nova senha para <strong id="resetUsername"
+                        style="margin-left: 5px;"></strong></div>
+            </div>
+            <div class="hero-actions">
+                <button class="btn-icon-close" onclick="closeResetModal()">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+        <div class="modal-body-premium" style="padding: 24px;">
+            <div class="input-group" style="margin-bottom: 16px;">
+                <i class="ph ph-lock"></i>
+                <input type="password" id="newPassword" placeholder="Nova senha">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 20px;">
+                <i class="ph ph-lock"></i>
+                <input type="password" id="confirmPassword" placeholder="Confirmar senha">
+            </div>
+
+            <div id="resetError" class="error-msg"
+                style="display: none; color: var(--status-error); font-size: 0.85rem; margin-bottom: 10px; padding: 10px; background: #FEF2F2; border-radius: 8px;">
+            </div>
+
+            <button id="btnConfirmReset" onclick="resetPassword()"
+                style="width: 100%; padding: 12px; justify-content: center; background: var(--primary); color: white; font-weight: 600; border-radius: 8px; border: none; cursor: pointer;">
+                <i class="ph-bold ph-check"></i> Confirmar Alteração
+            </button>
+
+            <!-- Success State (Hidden by default) -->
+            <div id="resetSuccess"
+                style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; position: absolute; top: 0; left: 0; width: 100%; background: #10B981; border-radius: 12px; z-index: 10;">
+                <div class="checkmark-circle">
+                    <div class="background"></div>
+                    <div class="checkmark draw"></div>
+                </div>
+                <h3 style="color: white; margin-top: 20px; font-size: 1.5rem;">Senha Alterada!</h3>
+                <p style="color: rgba(255,255,255,0.9); margin-top: 5px;">Operação realizada com sucesso.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Restore Status Badge CSS for Main Table */
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-badge.active {
+        background: rgba(74, 222, 128, 0.2);
+        color: #15803d;
+        /* Darker green for contrast */
+        border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    .status-badge.disabled {
+        background: rgba(239, 68, 68, 0.2);
+        color: #b91c1c;
+        /* Darker red */
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-badge.locked {
+        background: rgba(251, 191, 36, 0.2);
+        color: #b45309;
+        /* Darker amber */
+        border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    /* Checkmark Animation CSS */
+    .checkmark-circle {
+        width: 80px;
+        height: 80px;
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    .checkmark-circle .background {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #fff;
+        position: absolute;
+    }
+
+    .checkmark-circle .checkmark {
+        border-radius: 5px;
+    }
+
+    .checkmark-circle .checkmark.draw:after {
+        animation-delay: 100ms;
+        animation-duration: 1s;
+        animation-timing-function: ease;
+        animation-name: checkmark;
+        transform: scaleX(-1) rotate(135deg);
+        animation-fill-mode: forwards;
+    }
+
+    .checkmark-circle .checkmark:after {
+        opacity: 1;
+        height: 40px;
+        width: 20px;
+        transform-origin: left top;
+        border-right: 4px solid #10B981;
+        border-top: 4px solid #10B981;
+        content: '';
+        left: 20px;
+        top: 40px;
+        position: absolute;
+    }
+
+    @keyframes checkmark {
+        0% {
+            height: 0;
+            width: 0;
+            opacity: 1;
+        }
+
+        20% {
+            height: 0;
+            width: 20px;
+            opacity: 1;
+        }
+
+        40% {
+            height: 40px;
+            width: 20px;
+            opacity: 1;
+        }
+
+        100% {
+            height: 40px;
+            width: 20px;
+            opacity: 1;
+        }
+    }
+
+    /* --- SMOOTH ANIMATIONS & UI POLISH --- */
+
+    /* Modal Transitions */
+    .modal-overlay {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        /* Prevent clicks when hidden opacity 0 */
+        display: none;
+        /* Fallback */
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        /* Changed from none */
+        pointer-events: auto;
+    }
+
+    .modal-overlay.open {
+        opacity: 1;
+    }
+
+    .modal-premium {
+        transform: scale(0.95) translateY(10px);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Premium 'Out Expo' like ease */
+    }
+
+    .modal-overlay.open .modal-premium {
+        transform: scale(1) translateY(0);
+    }
+
+    /* Table Row Stagger Animation */
+    @keyframes rowFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .user-row {
+        opacity: 0;
+        /* Start hidden */
+        animation: rowFadeIn 0.4s ease forwards;
+    }
+
+    /* Loading Spinner Styling */
+    .anim-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script>
+    let currentUsername = '';
+    let currentUserDetail = null;
+    let allUsers = [];
+    let allGroups = [];
+    let isEditMode = false;
+
+    // --- DASHBOARD FUNCTIONS ---
+    function updateDashboardStats(users) {
+        // Calculate locally from the full user list for speed
+        const total = users.length;
+        const active = users.filter(u => u.statusClass === 'active').length;
+        const disabled = users.filter(u => u.statusClass === 'disabled').length;
+
+        let inactive90 = 0;
+        const now = new Date();
+        users.forEach(u => {
+            if (u.lastLogin && u.lastLogin !== 'Nunca') {
+                try {
+                    // Format: dd/mm/yyyy HH:MM
+                    const parts = u.lastLogin.split(' ')[0].split('/');
+                    const date = new Date(parts[2], parts[1] - 1, parts[0]);
+                    const diffTime = Math.abs(now - date);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 90) inactive90++;
+                } catch (e) { inactive90++; }
+            } else {
+                inactive90++; // Never logged in counts as inactive
+            }
+        });
+
+        document.getElementById('statTotal').innerText = total;
+        document.getElementById('statActiveCount').innerText = active;
+        document.getElementById('statDisabled').innerText = disabled;
+        document.getElementById('statInactive').innerText = inactive90;
+    }
+
+    // --- MANAGEMENT FUNCTIONS ---
+
+    async function unlockUser() {
+        if (!currentUserDetail) return;
+        if (!confirm(`Confirma desbloqueio da conta ${currentUserDetail.username}?`)) return;
+
+        try {
+            const res = await fetch(`/api/ad/users/${currentUserDetail.username}/unlock`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                loadUsers(); // Refresh
+                closeDetailModal();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        } catch (e) { alert('Erro de conexão'); }
+    }
+
+    async function toggleUserStatus() {
+        if (!currentUserDetail) return;
+        const isEnabled = currentUserDetail.statusClass !== 'disabled';
+        const action = isEnabled ? 'DESABILITAR' : 'HABILITAR';
+
+        if (!confirm(`Tem certeza que deseja ${action} o usuário ${currentUserDetail.username}?`)) return;
+
+        try {
+            const res = await fetch(`/api/ad/users/${currentUserDetail.username}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enable: !isEnabled })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                loadUsers(); // Refresh
+                closeDetailModal();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        } catch (e) { alert('Erro de conexão'); }
+    }
+
+    // --- EDIT MODE FUNCTIONS ---
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const viewEls = document.querySelectorAll('.view-mode');
+        const editEls = document.querySelectorAll('.edit-mode');
+
+        // Toggle visibility with smooth fade (optional, but block swap is safer for validation)
+        viewEls.forEach(el => el.style.display = isEditMode ? 'none' : 'block');
+
+        editEls.forEach(el => {
+            // Se for o container de adicionar grupo (div), usa flex
+            if (el.id === 'groupAddContainer') el.style.display = isEditMode ? 'flex' : 'none';
+            // Botões pequenos
+            else if (el.tagName === 'BUTTON') el.style.display = isEditMode ? 'inline-block' : 'none';
+            else el.style.display = isEditMode ? 'block' : 'none';
+        });
+
+        // Toggle Main Buttons
+        document.getElementById('btnEditUser').style.display = isEditMode ? 'none' : 'flex';
+        document.getElementById('btnSaveUser').style.display = isEditMode ? 'flex' : 'none';
+
+        if (isEditMode) {
+            // Populate inputs
+            document.getElementById('editName').value = currentUserDetail.displayName;
+            document.getElementById('editEmail').value = currentUserDetail.email;
+            document.getElementById('editPhone').value = currentUserDetail.phone;
+            document.getElementById('editMobile').value = currentUserDetail.mobile;
+            document.getElementById('editDept').value = currentUserDetail.department;
+            document.getElementById('editTitle').value = currentUserDetail.title;
+            document.getElementById('editCompany').value = currentUserDetail.company;
+        }
+    }
+
+    async function saveUserUpdates() {
+        const updates = {
+            displayName: document.getElementById('editName').value,
+            mail: document.getElementById('editEmail').value,
+            telephoneNumber: document.getElementById('editPhone').value,
+            mobile: document.getElementById('editMobile').value,
+            department: document.getElementById('editDept').value,
+            title: document.getElementById('editTitle').value,
+            company: document.getElementById('editCompany').value
+        };
+
+        try {
+            const res = await fetch(`/api/ad/users/${currentUserDetail.username}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                alert('Dados atualizados!');
+                toggleEditMode(); // Exit edit mode
+                loadUsers(); // Refresh table
+                // Update modal view values
+                currentUserDetail = { ...currentUserDetail, ...updates }; // Optimistic update local
+                showUserDetail(currentUserDetail.username); // Re-render modal
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        } catch (e) { alert('Erro ao salvar'); }
+    }
+
+    // --- GROUP MANAGEMENT ---
+
+    async function openGroupAdd() {
+        if (allGroups.length === 0) {
+            // Load groups first time
+            try {
+                const res = await fetch('/api/ad/groups');
+                allGroups = await res.json();
+                const sel = document.getElementById('groupSelect');
+                sel.innerHTML = '<option value="">Selecione um grupo...</option>';
+                allGroups.forEach(g => {
+                    sel.innerHTML += `<option value="${g}">${g}</option>`;
+                });
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    async function confirmAddGroup() {
+        const group = document.getElementById('groupSelect').value;
+        if (!group) return;
+
+        try {
+            const res = await fetch('/api/ad/groups/membership', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: currentUserDetail.username,
+                    group: group,
+                    action: 'add'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Adicionado ao grupo ${group}!`);
+                loadUsers();
+                // Refresh modal groups
+                if (!currentUserDetail.groups) currentUserDetail.groups = [];
+                currentUserDetail.groups.push(group);
+                showUserDetail(currentUserDetail.username);
+                // Re-enable edit mode view if needed, but showUserDetail resets it. 
+                // Ideally reload modal keeps edit state, but simple is ok.
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        } catch (e) { alert('Erro ao adicionar grupo'); }
+    }
+
+    async function removeGroup(groupName) {
+        if (!confirm(`Remover usuário do grupo ${groupName}?`)) return;
+        try {
+            const res = await fetch('/api/ad/groups/membership', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: currentUserDetail.username,
+                    group: groupName,
+                    action: 'remove'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Removido do grupo ${groupName}!`);
+                loadUsers();
+                currentUserDetail.groups = currentUserDetail.groups.filter(g => g !== groupName);
+                showUserDetail(currentUserDetail.username);
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        } catch (e) { alert('Erro ao remover grupo'); }
+    }
+
+    async function loadUsers() {
+        // Show Loading State
+        const container = document.getElementById('usersList');
+        container.innerHTML = `
+            <div style="text-align:center; padding: 60px;">
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.7;">
+                    <i class="ph-bold ph-spinner-gap anim-spin" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 16px;"></i>
+                    <span style="font-weight: 500; color: #64748b;">Carregando usuários do AD...</span>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await fetch('/api/ad/users');
+            allUsers = await response.json();
+
+            // UPDATE DASHBOARD METRICS
+            updateDashboardStats(allUsers);
+
+            // Populate department filter
+            const departments = [...new Set(allUsers.map(u => u.department).filter(d => d !== 'N/A'))];
+            const deptSelect = document.getElementById('filterDepartment');
+            deptSelect.innerHTML = '<option value="">Todos os Departamentos</option>';
+            departments.forEach(dept => {
+                deptSelect.innerHTML += `<option value="${dept}">${dept}</option>`;
+            });
+
+            renderUsers(allUsers);
+        } catch (error) {
+            console.error('Erro ao carregar usuários:', error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:red;">Erro ao carregar dados. Tente novamente.</td></tr>';
+        }
+    }
+
+    function updateDashboardStats(users) {
+        document.getElementById('statTotal').textContent = users.length;
+        document.getElementById('statActiveCount').textContent = users.filter(u => u.statusClass === 'active' || u.enabled).length;
+        document.getElementById('statDisabled').textContent = users.filter(u => u.statusClass === 'disabled' || !u.enabled).length;
+        document.getElementById('statInactive').textContent = users.filter(u => u.is_inactive).length;
+    }
+
+    // --- RENDERER REFACTOR ---
+    function renderUsers(users) {
+        const container = document.getElementById('usersList');
+        // Clean start
+        container.innerHTML = '';
+
+        // Empty State
+        if (users.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding: 60px;">
+                    <i class="ph ph-magnifying-glass" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 24px;"></i>
+                    <p style="color: #64748b; font-weight: 500; font-size: 1.1rem;">Nenhum usuário encontrado.</p>
+                    <p style="color: #94a3b8; font-size: 0.9rem;">Tente ajustar seus filtros de busca.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+
+        users.forEach((user, index) => {
+            const delay = index < 20 ? index * 0.05 : 0;
+
+            // Name Polish
+            let mainName = user.displayName;
+            let subName = user.username;
+            if (!mainName || mainName === 'N/A') {
+                mainName = user.username;
+                subName = '';
+            }
+
+            let statusClass = user.statusClass;
+            if (!statusClass) {
+                statusClass = user.enabled ? 'active' : 'disabled';
+            }
+            // Normalize for CSS (strip 'status-' prefix if it exists from backend)
+            statusClass = statusClass.replace('status-', '');
+
+            html += `
+            <div class="user-list-row animate-up" style="animation-delay: ${delay}s" onclick="showUserDetail('${user.username}')">
+                
+                <!-- Col 1: Name -->
+                <div class="col-name">
+                    <div class="user-avatar-small"><i class="ph-fill ph-user"></i></div>
+                    <div>
+                        <div class="col-text" style="font-weight: 600;">${mainName}</div>
+                        ${subName ? `<div class="col-text-secondary">${subName}</div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Col 2: Dept -->
+                <div class="col-text">
+                    ${(user.department && user.department !== 'N/A') ? user.department : '<span style="color:#94a3b8">-</span>'}
+                </div>
+
+                <!-- Col 3: Job -->
+                <div class="col-text">
+                    ${(user.title && user.title !== 'N/A') ? user.title : '<span style="color:#94a3b8">-</span>'}
+                </div>
+
+                <!-- Col 4: Email -->
+                <div class="col-text" title="${user.email}">
+                    ${(user.email && user.email !== 'N/A') ? user.email : '<span style="color:#94a3b8">-</span>'}
+                </div>
+
+                <!-- Col 5: Status -->
+                <div class="col-status">
+                     <span class="status-badge ${statusClass}">${user.status}</span>
+                </div>
+
+                <!-- Col 6: Actions -->
+                <div class="col-actions">
+                     <button onclick="event.stopPropagation(); openResetModal('${user.username}')" class="btn-action-compact primary" title="Resetar Senha">
+                        <i class="ph-bold ph-lock-key"></i>
+                    </button>
+                    <button onclick="event.stopPropagation(); showUserDetail('${user.username}')" class="btn-refresh-pill">
+                        Detalhes
+                    </button>
+                </div>
+
+            </div>`;
+        });
+
+        // Prepend Header
+        const headerHtml = `
+            <div class="list-header-users">
+                <div class="list-header-item">Nome / Usuário</div>
+                <div class="list-header-item">Departamento</div>
+                <div class="list-header-item">Cargo</div>
+                <div class="list-header-item">Email</div>
+                <div class="list-header-item" style="text-align: center;">Status</div>
+                <div class="list-header-item" style="text-align: right;">Ações</div>
+            </div>
+        `;
+
+        container.innerHTML = headerHtml + html;
+    }
+
+    /* Group Management */
+
+    function showUserDetail(username) {
+        const user = allUsers.find(u => u.username === username);
+        if (!user) return;
+
+        currentUserDetail = user;
+
+        document.getElementById('detailUsername').textContent = user.username;
+        document.getElementById('detailName').textContent = user.displayName;
+        document.getElementById('detailEmail').textContent = user.email;
+        document.getElementById('detailPhone').textContent = user.phone;
+        document.getElementById('detailMobile').textContent = user.mobile;
+        document.getElementById('detailDept').textContent = user.department;
+        document.getElementById('detailTitle').textContent = user.title;
+        document.getElementById('detailCompany').textContent = user.company;
+        document.getElementById('detailOffice').textContent = user.office;
+        document.getElementById('detailManager').textContent = user.manager;
+
+        // Premium Badge Logic
+        document.getElementById('detailStatus').innerHTML = `<span class="status-badge ${user.statusClass}">${user.status}</span>`;
+
+        document.getElementById('detailLastLogin').textContent = user.lastLogin;
+
+        // Machine Detection Logic
+        const machEl = document.getElementById('detailMachine');
+        if (user.last_machine && user.last_machine !== 'N/A') {
+            machEl.textContent = user.last_machine;
+            machEl.style.color = 'var(--primary)';
+        } else {
+            machEl.textContent = 'Não detectado';
+            machEl.style.color = '#94a3b8';
+        }
+
+        document.getElementById('detailCreated').textContent = user.created;
+        document.getElementById('detailDesc').textContent = user.description;
+
+        // Groups with Pill Style
+        const groupsDiv = document.getElementById('detailGroups');
+        if (user.groups && user.groups.length > 0) {
+            groupsDiv.innerHTML = user.groups.map(g => `
+                <div class="pill-premium">
+                    <i class="ph-bold ph-users"></i> ${g}
+                </div>
+            `).join('');
+        } else {
+            groupsDiv.innerHTML = '<span style="color: var(--text-muted);">Nenhum grupo associado</span>';
+        }
+
+        // Premium Buttons Logic
+        const btnUnlock = document.getElementById('btnUnlock');
+        const btnToggleStatus = document.getElementById('btnToggleStatus');
+        const toggleIcon = document.getElementById('toggleStatusIcon');
+        const toggleText = document.getElementById('toggleStatusText');
+
+        // Unlock Button visibility
+        if (user.status === 'BLOQUEADO') {
+            btnUnlock.style.display = 'flex';
+        } else {
+            btnUnlock.style.display = 'none';
+        }
+
+        // Toggle Status Button Logic
+        const isEnabled = user.statusClass !== 'disabled';
+        if (isEnabled) {
+            // User is active, show "Desabilitar" option
+            btnToggleStatus.className = 'btn-small disable-variant';
+            toggleIcon.className = 'ph-bold ph-user-minus';
+            toggleText.textContent = 'Desabilitar';
+        } else {
+            // User is disabled, show "Habilitar" option
+            btnToggleStatus.className = 'btn-small enable-variant';
+            toggleIcon.className = 'ph-bold ph-user-plus';
+            toggleText.textContent = 'Habilitar';
+        }
+
+        const overlay = document.getElementById('userDetailModal');
+        // Activate flex display
+        overlay.classList.add('active');
+
+        // Wait small tick for browser to register 'display:flex' then add 'open' for opacity
+        requestAnimationFrame(() => {
+            overlay.classList.add('open');
+        });
+    }
+
+    function closeDetailModal() {
+        const overlay = document.getElementById('userDetailModal');
+        overlay.classList.remove('open');
+
+        // Wait for transition (300ms) then remove active (display:flex)
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, 300);
+    }
+
+    function openResetModal(username) {
+        currentUsername = username;
+        document.getElementById('resetUsername').textContent = username;
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('resetError').style.display = 'none';
+
+        const overlay = document.getElementById('resetModal');
+        overlay.classList.add('active');
+        requestAnimationFrame(() => {
+            overlay.classList.add('open');
+        });
+    }
+
+    function closeResetModal() {
+        const overlay = document.getElementById('resetModal');
+        overlay.classList.remove('open');
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, 300);
+    }
+
+    async function resetPassword() {
+        const newPass = document.getElementById('newPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+        const errorDiv = document.getElementById('resetError');
+        const btn = document.getElementById('btnConfirmReset');
+
+        if (newPass !== confirmPass) {
+            errorDiv.textContent = 'As senhas não coincidem';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (newPass.length < 8) {
+            errorDiv.textContent = 'A senha deve ter no mínimo 8 caracteres';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // UI Loading State
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph-bold ph-spinner-gap anim-spin"></i> Resetando...';
+
+        try {
+            const response = await fetch('/api/ad/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUsername, password: newPass })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Show Success Animation
+                const successDiv = document.getElementById('resetSuccess');
+                const modalBody = document.querySelector('#resetModal .modal-body-premium');
+
+                successDiv.style.display = 'flex';
+                // Trigger animation
+                successDiv.classList.add('animate-success');
+
+                setTimeout(() => {
+                    closeResetModal();
+                    // Reset UI for next time
+                    setTimeout(() => {
+                        successDiv.style.display = 'none';
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="ph-bold ph-check"></i> Confirmar Alteração';
+                    }, 300);
+                }, 2000); // Wait 2s
+            } else {
+                errorDiv.textContent = data.message;
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph-bold ph-check"></i> Confirmar Alteração';
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Erro ao resetar senha';
+            errorDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-check"></i> Confirmar Alteração';
+        }
+    }
+
+    function refreshUsers() {
+        loadUsers();
+    }
+
+    // Filtros
+    document.getElementById('searchUser').addEventListener('input', applyFilters);
+    document.getElementById('filterDepartment').addEventListener('change', applyFilters);
+    document.getElementById('filterStatus').addEventListener('change', applyFilters);
+
+    function applyFilters() {
+        const search = document.getElementById('searchUser').value.toLowerCase();
+        const dept = document.getElementById('filterDepartment').value;
+        const status = document.getElementById('filterStatus').value;
+
+        let filtered = allUsers;
+
+        if (search) {
+            filtered = filtered.filter(u =>
+                u.username.toLowerCase().includes(search) ||
+                u.displayName.toLowerCase().includes(search)
+            );
+        }
+
+        if (dept) {
+            filtered = filtered.filter(u => u.department === dept);
+        }
+
+        if (status) {
+            filtered = filtered.filter(u => u.statusClass === status);
+        }
+
+        renderUsers(filtered);
+    }
+
+    loadUsers();
+</script>
+{% endblock %}

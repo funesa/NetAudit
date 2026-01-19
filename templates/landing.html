@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetAudit - Inteligência em Infraestrutura</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #0f172a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--secondary);
+            color: #fff;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .bg-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 100%);
+        }
+
+        .glow-sphere {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: float 20s infinite alternate;
+        }
+
+        @keyframes float {
+            from {
+                transform: translate(-10%, -10%);
+            }
+
+            to {
+                transform: translate(20%, 20%);
+            }
+        }
+
+        /* Header */
+        header {
+            padding: 24px 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #fff;
+        }
+
+        .logo i {
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+        }
+
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .btn-login {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-login:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Hero */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        .badge {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--primary);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hero h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            letter-spacing: -3px;
+            line-height: 1;
+            margin-bottom: 24px;
+            background: linear-gradient(to bottom, #fff 40%, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            max-width: 700px;
+            margin-bottom: 40px;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn-primary-large {
+            background: #fff;
+            color: var(--secondary);
+            padding: 16px 36px;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .btn-primary-large:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary-large {
+            background: var(--glass);
+            color: #fff;
+            border: 1px solid var(--glass-border);
+            padding: 16px 36px;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .btn-secondary-large:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Features */
+        .features {
+            padding: 100px 80px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-10px);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 24px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .feature-card p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 80px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .copyright span {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1024px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+                padding: 40px 20px;
+            }
+
+            header {
+                padding: 20px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow">
+        <div class="glow-sphere" style="top: -10%; left: -10%;"></div>
+        <div class="glow-sphere"
+            style="bottom: -10%; right: -10%; background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);">
+        </div>
+    </div>
+
+    <header>
+        <div class="logo">
+            <i class="ph-fill ph-brain"></i>
+            <span>NetAudit</span>
+        </div>
+        <nav class="nav-links">
+            <a href="#features">Recursos</a>
+            <a href="#about">Sobre</a>
+            <a href="#pricing">Licenciamento</a>
+        </nav>
+        <a href="/login" class="btn-login">Acessar Sistema</a>
+    </header>
+
+    <section class="hero">
+        <div class="badge">Disponível Versão 2026.1</div>
+        <h1>Inteligência para sua Rede Local</h1>
+        <p>A solução definitiva para inventário de ativos, gestão de Active Directory e integração nativa com GLPI. Tudo
+            em uma única plataforma premium.</p>
+        <div class="hero-actions">
+            <a href="/login" class="btn-primary-large">Começar Agora</a>
+            <a href="#features" class="btn-secondary-large">Conhecer Recursos</a>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="feature-card">
+            <div class="feature-icon"><i class="ph-fill ph-scan"></i></div>
+            <h3>Scanner Autônomo</h3>
+            <p>Varredura inteligente de rede com detecção de SO, hardware, uptime e serviços. Sem necessidade de agentes
+                externos.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="ph-fill ph-windows-logo"></i></div>
+            <h3>Gestão de AD</h3>
+            <p>Controle total de usuários, grupos e segurança do Active Directory. Reset de senhas e auditoria em tempo
+                real.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="ph-fill ph-ticket"></i></div>
+            <h3>Sincronização GLPI</h3>
+            <p>Integração bidirecional com o GLPI para abertura de chamados, gestão de inventário e acompanhamento
+                técnico.</p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="copyright">© 2026 <span>NetAudit Enterprise</span>. Todos os direitos reservados.</div>
+        <div>Desenvolvido para Profissionais de TI.</div>
+    </footer>
+</body>
+
+</html>

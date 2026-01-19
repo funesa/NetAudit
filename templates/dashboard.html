@@ -1,0 +1,1224 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - NetAudit{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== MODERN DASHBOARD STYLES ===== */
+    .dashboard-container {
+        padding: 24px 32px;
+        width: 100%;
+    }
+
+    .dashboard-header-modern {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+    }
+
+    .dashboard-title {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .dashboard-title h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .dashboard-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .last-update {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--bg-hover);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .last-update i {
+        color: var(--primary);
+    }
+
+    /* Stats Grid - 5 cards */
+    /* Stats Grid - Responsive Auto-fit */
+    .stats-grid-dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card-dashboard {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card-dashboard::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-color-light) 100%);
+    }
+
+    .stat-card-dashboard:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card-dashboard.purple::before {
+        --accent-color: #8b5cf6;
+        --accent-color-light: #a78bfa;
+    }
+
+    .stat-card-dashboard.blue::before {
+        --accent-color: #3b82f6;
+        --accent-color-light: #60a5fa;
+    }
+
+    .stat-card-dashboard.green::before {
+        --accent-color: #10b981;
+        --accent-color-light: #34d399;
+    }
+
+    .stat-card-dashboard.orange::before {
+        --accent-color: #f59e0b;
+        --accent-color-light: #fbbf24;
+    }
+
+    .stat-card-dashboard.red::before {
+        --accent-color: #ef4444;
+        --accent-color-light: #f87171;
+    }
+
+    .stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .stat-icon-dashboard {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .stat-card-dashboard.purple .stat-icon-dashboard {
+        background: rgba(139, 92, 246, 0.1);
+        color: #a78bfa;
+    }
+
+    .stat-card-dashboard.blue .stat-icon-dashboard {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+    }
+
+    .stat-card-dashboard.green .stat-icon-dashboard {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+    }
+
+    .stat-card-dashboard.orange .stat-icon-dashboard {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+
+    .stat-card-dashboard.red .stat-icon-dashboard {
+        background: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+    }
+
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .stat-trend.up {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .stat-trend.down {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .stat-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .stat-value-dashboard {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        line-height: 1;
+    }
+
+    .stat-label-dashboard {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .stat-footer {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+        /* Allow wrapping on very small screens */
+        gap: 4px;
+    }
+
+    .stat-link {
+        color: var(--primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Main Grid - 2 columns */
+    .dashboard-main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    /* Panel Card */
+    .panel-card {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .panel-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .panel-title i {
+        color: var(--primary);
+    }
+
+    .panel-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-panel {
+        padding: 8px 16px;
+        border: none;
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-panel:hover {
+        background: var(--border);
+        color: var(--text-main);
+    }
+
+    .btn-panel.primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-panel.primary:hover {
+        background: var(--primary-dark);
+    }
+
+    /* Activity List */
+    .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        background: var(--bg-hover);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .activity-item:hover {
+        background: var(--border);
+        transform: translateX(4px);
+    }
+
+    .activity-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .activity-icon.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+    }
+
+    .activity-icon.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+
+    .activity-icon.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+    }
+
+    .activity-icon.info {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+    }
+
+    .activity-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+
+    .activity-description {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .activity-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* Quick Actions */
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .quick-action-btn {
+        padding: 16px;
+        background: var(--bg-hover);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .quick-action-btn:hover {
+        background: var(--bg-panel);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .quick-action-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .quick-action-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    /* Alerts Panel */
+    .alerts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .alert-item {
+        padding: 12px 16px;
+        border-radius: 10px;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .alert-item.critical {
+        background: rgba(239, 68, 68, 0.1);
+        border-left-color: #ef4444;
+    }
+
+    .alert-item.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border-left-color: #f59e0b;
+    }
+
+    .alert-item.info {
+        background: rgba(59, 130, 246, 0.1);
+        border-left-color: #3b82f6;
+    }
+
+    .alert-icon {
+        font-size: 1.25rem;
+    }
+
+    .alert-item.critical .alert-icon {
+        color: #dc2626;
+    }
+
+    .alert-item.warning .alert-icon {
+        color: #f59e0b;
+    }
+
+    .alert-item.info .alert-icon {
+        color: #3b82f6;
+    }
+
+    .alert-content {
+        flex: 1;
+    }
+
+    .alert-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-main);
+        margin-bottom: 2px;
+    }
+
+    .alert-description {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .alert-count {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-main);
+    }
+
+    .charts-grid-dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+        width: 100%;
+    }
+
+    .chart-panel {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+    }
+
+    .chart-panel .panel-header {
+        margin-bottom: 20px;
+    }
+
+    .chart-wrapper {
+        flex: 1;
+        position: relative;
+        min-height: 280px;
+    }
+
+    /* Responsive */
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .dashboard-main-grid {
+            grid-template-columns: 1fr;
+            /* Stack main grid earlier */
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-header-modern {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: 1fr;
+        }
+
+        /* Ensure cards don't get too small on mobile */
+        .stats-grid-dashboard {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header-modern">
+        <div class="dashboard-title">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h1>🎯 Visão Geral da Rede</h1>
+                <span
+                    style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                    PRO License
+                </span>
+            </div>
+            <div class="dashboard-subtitle">
+                <i class="ph-fill ph-chart-line"></i>
+                <span>Monitoramento em tempo real de toda a infraestrutura</span>
+            </div>
+        </div>
+        <div class="last-update">
+            <i class="ph-fill ph-clock"></i>
+            <span>Atualizado: <strong id="lastUpdateTime">--</strong></span>
+        </div>
+    </div>
+
+    <!-- Top Stats - 5 Cards -->
+    <div class="stats-grid-dashboard">
+        <!-- Usuários AD -->
+        {% if general_settings.ad_enabled %}
+        <div class="stat-card-dashboard purple" onclick="window.location.href='/ad-users'">
+            <div class="stat-card-header">
+                <div class="stat-icon-dashboard">
+                    <i class="ph-fill ph-users"></i>
+                </div>
+                <div class="stat-trend up" id="usersTrend" style="display: none;">
+                    <i class="ph-fill ph-arrow-up"></i>
+                    <span>+5%</span>
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-value-dashboard" id="totalUsers">--</div>
+                <div class="stat-label-dashboard">Usuários do AD</div>
+            </div>
+            <div class="stat-footer">
+                <span id="activeUsersCount">-- ativos</span>
+                <span class="stat-link">Ver todos <i class="ph ph-arrow-right"></i></span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dispositivos Online -->
+        <div class="stat-card-dashboard blue" onclick="window.location.href='/scan'">
+            <div class="stat-card-header">
+                <div class="stat-icon-dashboard">
+                    <i class="ph-fill ph-devices"></i>
+                </div>
+                <div class="stat-trend up" id="devicesTrend" style="display: none;">
+                    <i class="ph-fill ph-arrow-up"></i>
+                    <span>+12</span>
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-value-dashboard" id="onlineDevices">--</div>
+                <div class="stat-label-dashboard">Dispositivos Online</div>
+            </div>
+            <div class="stat-footer">
+                <span id="totalDevicesCount">-- total</span>
+                <span class="stat-link">Escanear <i class="ph ph-arrow-right"></i></span>
+            </div>
+        </div>
+
+        <!-- IPs Livres -->
+        <div class="stat-card-dashboard green" onclick="window.location.href='/ip-map'">
+            <div class="stat-card-header">
+                <div class="stat-icon-dashboard">
+                    <i class="ph-fill ph-map-pin"></i>
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-value-dashboard" id="freeIPs">--</div>
+                <div class="stat-label-dashboard">IPs Disponíveis</div>
+            </div>
+            <div class="stat-footer">
+                <span id="ipUsagePercent">-- em uso</span>
+                <span class="stat-link">Ver mapa <i class="ph ph-arrow-right"></i></span>
+            </div>
+        </div>
+
+        <!-- Logins Falhados -->
+        {% if general_settings.ad_enabled %}
+        <div class="stat-card-dashboard orange" onclick="window.location.href='/security'">
+            <div class="stat-card-header">
+                <div class="stat-icon-dashboard">
+                    <i class="ph-fill ph-warning"></i>
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-value-dashboard" id="failedLogins">--</div>
+                <div class="stat-label-dashboard">Logins Falhados</div>
+            </div>
+            <div class="stat-footer">
+                <span id="failedLoginsTime">Últimas 24h</span>
+                <span class="stat-link">Ver detalhes <i class="ph ph-arrow-right"></i></span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Alertas Críticos -->
+        {% if general_settings.ad_enabled %}
+        <div class="stat-card-dashboard red" onclick="window.location.href='/ad-shares'">
+            <div class="stat-card-header">
+                <div class="stat-icon-dashboard">
+                    <i class="ph-fill ph-bell-ringing"></i>
+                </div>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-value-dashboard" id="criticalAlerts">--</div>
+                <div class="stat-label-dashboard">Alertas Críticos</div>
+            </div>
+            <div class="stat-footer">
+                <span id="alertsDescription">Discos e servidores</span>
+                <span class="stat-link">Ver todos <i class="ph ph-arrow-right"></i></span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-grid-dashboard">
+        <!-- Distribuição de SO -->
+        <div class="chart-panel">
+            <div class="panel-header">
+                <h2 class="panel-title"><i class="ph-fill ph-desktop"></i> Ativos por Sistema</h2>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="osChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tipos de Dispositivos -->
+        <div class="chart-panel">
+            <div class="panel-header">
+                <h2 class="panel-title"><i class="ph-fill ph-devices"></i> Perfil de Infra</h2>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Status de Chamados -->
+        {% if general_settings.tickets_enabled %}
+        <div class="chart-panel">
+            <div class="panel-header">
+                <h2 class="panel-title"><i class="ph-fill ph-ticket"></i> Demanda Helpdesk</h2>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="ticketChart"></canvas>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Main Grid -->
+    <div class="dashboard-main-grid">
+        <!-- Left Panel - Recent Activity -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    <i class="ph-fill ph-clock-counter-clockwise"></i>
+                    Atividade Recente
+                </h2>
+                <div class="panel-actions">
+                    <button class="btn-panel" onclick="loadDashboardData()">
+                        <i class="ph ph-arrows-clockwise"></i>
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+            <div class="activity-list" id="activityList">
+                <!-- Populated by JavaScript -->
+                <div class="activity-item">
+                    <div class="activity-icon info">
+                        <i class="ph-fill ph-info"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Carregando atividades...</div>
+                        <div class="activity-description">Aguarde enquanto buscamos os dados</div>
+                        <div class="activity-time">Agora</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Quick Actions & Alerts -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Quick Actions -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="ph-fill ph-lightning"></i>
+                        Ações Rápidas
+                    </h2>
+                </div>
+                <div class="quick-actions-grid">
+                    <div class="quick-action-btn" onclick="window.location.href='/scan'">
+                        <div class="quick-action-icon">
+                            <i class="ph-fill ph-scan"></i>
+                        </div>
+                        <div class="quick-action-label">Scan de Rede</div>
+                    </div>
+                    {% if general_settings.ad_enabled %}
+                    <div class="quick-action-btn" onclick="window.location.href='/ad-users'">
+                        <div class="quick-action-icon">
+                            <i class="ph-fill ph-user-plus"></i>
+                        </div>
+                        <div class="quick-action-label">Novo Usuário</div>
+                    </div>
+                    {% endif %}
+                    <div class="quick-action-btn" onclick="window.location.href='/ip-map'">
+                        <div class="quick-action-icon">
+                            <i class="ph-fill ph-map-trifold"></i>
+                        </div>
+                        <div class="quick-action-label">Mapa de IPs</div>
+                    </div>
+                    <div class="quick-action-btn" onclick="window.location.href='/reports'">
+                        <div class="quick-action-icon">
+                            <i class="ph-fill ph-file-text"></i>
+                        </div>
+                        <div class="quick-action-label">Relatórios</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="ph-fill ph-bell"></i>
+                        Alertas
+                    </h2>
+                </div>
+                <div class="alerts-list" id="alertsList">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== DASHBOARD REAL-TIME UPDATES =====
+    let updateInterval = null;
+
+    // Variáveis globais para os gráficos
+    let charts = {
+        os: null,
+        type: null,
+        ticket: null
+    };
+
+    async function loadDashboardData() {
+        try {
+            // Atualizar timestamp
+            document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString('pt-BR');
+
+            // Executar todas as requisições em paralelo
+            const [statsRes, ipsRes, secRes, alertsRes, devRes] = await Promise.all([
+                fetch('/api/dashboard/stats'),
+                fetch('/api/ip-map/free'),
+                fetch('/api/security/failed-logins'),
+                fetch('/api/sidebar/alerts'),
+                fetch('/status')
+            ]);
+
+            const data = await statsRes.json();
+            const ipsData = await ipsRes.json();
+            const securityData = await secRes.json();
+            const alertsData = await alertsRes.json();
+            const devicesData = await devRes.json();
+
+            if (data.error) console.error("Erro da API:", data.error);
+
+            // 1. Atualizar Cards de Usuários
+            try {
+                if (document.getElementById('totalUsers')) {
+                    animateCount('totalUsers', data.total_users || 0);
+                    document.getElementById('activeUsersCount').textContent = `${data.active_users || 0} ativos`;
+                }
+            } catch (e) { console.warn("Erro users card:", e); }
+
+            // 2. Atualizar Cards de Dispositivos
+            try {
+                if (document.getElementById('onlineDevices')) {
+                    animateCount('onlineDevices', data.online_count || 0);
+                    document.getElementById('totalDevicesCount').textContent = `${data.online_count || 0} detectados`;
+                }
+            } catch (e) { console.warn("Erro devices card:", e); }
+
+            // 3. Atualizar Gráficos
+            try { if (!data.error) updateCharts(data); } catch (e) { console.warn("Erro charts:", e); }
+
+            // 4. Buscar IPs livres
+            try {
+                animateCount('freeIPs', ipsData.count || 0);
+                const totalIPs = 510;
+                const usedIPs = totalIPs - (ipsData.count || 0);
+                const usagePercent = Math.round((usedIPs / totalIPs) * 100);
+                if (document.getElementById('ipUsagePercent')) document.getElementById('ipUsagePercent').textContent = `${usagePercent}% em uso`;
+            } catch (e) { console.warn("Erro IPs card:", e); }
+
+            // 5. Buscar logins falhados
+            try {
+                if (document.getElementById('failedLogins')) {
+                    animateCount('failedLogins', securityData.count || 0);
+                }
+            } catch (e) { console.warn("Erro security card:", e); }
+
+            // 6. Buscar alertas da sidebar
+            try {
+                if (document.getElementById('criticalAlerts')) {
+                    const criticalCount = (alertsData.full_disks || 0) + (alertsData.offline_servers || 0);
+                    animateCount('criticalAlerts', criticalCount);
+                    document.getElementById('alertsDescription').textContent =
+                        `${alertsData.full_disks || 0} discos, ${alertsData.offline_servers || 0} servidores`;
+                }
+            } catch (e) { console.warn("Erro alerts card:", e); }
+
+            // 7. Listas e UI
+            try { updateActivityList(devicesData, data, securityData); } catch (e) { console.warn("Erro activity list:", e); }
+            try { updateAlertsList(alertsData); } catch (e) { console.warn("Erro alerts list:", e); }
+
+            // SALVAR CACHE
+            saveDashboardCache({ stats: data, ips: ipsData, security: securityData, alerts: alertsData, devices: devicesData });
+        } catch (error) {
+            console.error('Erro ao carregar dados do dashboard:', error);
+        }
+    }
+
+    // ===== FUNCOES DE ANIMACAO E CACHE =====
+
+    function animateCount(id, endValue) {
+        const element = document.getElementById(id);
+        if (!element) return;
+
+        const startValue = parseInt(element.textContent.replace(/\D/g, '')) || 0;
+        if (startValue === endValue) return;
+
+        const duration = 1500; // ms
+        const startTime = performance.now();
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (easeOutExpo)
+            const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+
+            const current = Math.floor(startValue + (endValue - startValue) * ease);
+            element.textContent = current;
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            } else {
+                element.textContent = endValue;
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    function saveDashboardCache(fullData) {
+        try {
+            localStorage.setItem('dashboard_cache_v2', JSON.stringify(fullData));
+            localStorage.setItem('dashboard_cache_time', Date.now());
+        } catch (e) { console.error("Cache save fail", e); }
+    }
+
+    function restoreDashboardCache() {
+        try {
+            const saved = localStorage.getItem('dashboard_cache_v2');
+            if (!saved) return;
+
+            const cache = JSON.parse(saved);
+            const { stats, ips, security, alerts, devices } = cache;
+
+            // Restaura valores instantaneamente (sem animação no load inicial para ser rapido)
+            if (stats) {
+                if (document.getElementById('totalUsers')) {
+                    document.getElementById('totalUsers').textContent = stats.total_users || 0;
+                    document.getElementById('activeUsersCount').textContent = `${stats.active_users || 0} ativos`;
+                }
+                if (document.getElementById('onlineDevices')) {
+                    document.getElementById('onlineDevices').textContent = stats.online_count || 0;
+                    document.getElementById('totalDevicesCount').textContent = `${stats.online_count || 0} detectados`;
+                }
+                updateCharts(stats);
+            }
+
+            if (ips) {
+                document.getElementById('freeIPs').textContent = ips.count || 0;
+                const totalIPs = 510;
+                const usedIPs = totalIPs - (ips.count || 0);
+                const p = Math.round((usedIPs / totalIPs) * 100);
+                document.getElementById('ipUsagePercent').textContent = `${p}% em uso`;
+            }
+
+            if (security) {
+                document.getElementById('failedLogins').textContent = security.count || 0;
+            }
+
+            if (alerts && document.getElementById('criticalAlerts')) {
+                const c = (alerts.full_disks || 0) + (alerts.offline_servers || 0);
+                document.getElementById('criticalAlerts').textContent = c;
+                document.getElementById('alertsDescription').textContent =
+                    `${alerts.full_disks || 0} discos, ${alerts.offline_servers || 0} servidores`;
+                updateAlertsList(alerts);
+            }
+
+            if (devices && stats && security) {
+                updateActivityList(devices, stats, security);
+            }
+
+        } catch (e) { console.error("Cache restore fail", e); }
+    }
+
+    function updateCharts(data) {
+        // Cores Premium (Modern SaaS Palette)
+        const palette = [
+            '#6366f1', '#10b981', '#f59e0b', '#ef4444',
+            '#8b5cf6', '#3b82f6', '#ec4899', '#06b6d4'
+        ];
+
+        // 1. Gráfico de SO (Doughnut)
+        const osLabels = Object.keys(data.os_distribution);
+        const osValues = Object.values(data.os_distribution);
+
+        if (charts.os) {
+            charts.os.data.labels = osLabels;
+            charts.os.data.datasets[0].data = osValues;
+            charts.os.update({ duration: 800, easing: 'easeOutQuart' });
+        } else {
+            const osCtx = document.getElementById('osChart').getContext('2d');
+            charts.os = new Chart(osCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: osLabels,
+                    datasets: [{
+                        data: osValues,
+                        backgroundColor: palette,
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // 2. Gráfico de Tipos (Bar Horizontal)
+        const typeLabels = Object.keys(data.device_types).map(t => t.charAt(0).toUpperCase() + t.slice(1));
+        const typeValues = Object.values(data.device_types);
+
+        if (charts.type) {
+            charts.type.data.labels = typeLabels;
+            charts.type.data.datasets[0].data = typeValues;
+            charts.type.update({ duration: 800, easing: 'easeOutQuart' });
+        } else {
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            charts.type = new Chart(typeCtx, {
+                type: 'bar',
+                data: {
+                    labels: typeLabels,
+                    datasets: [{
+                        label: 'Dispositivos',
+                        data: typeValues,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8,
+                        maxBarThickness: 30
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { precision: 0 } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // 3. Gráfico de Tickets (Bar Vertical)
+        if (data.ticket_stats && document.getElementById('ticketChart')) {
+            const tStats = data.ticket_stats;
+            const ticketValues = [tStats.new, tStats.processing, tStats.solved, tStats.closed];
+
+            if (charts.ticket) {
+                charts.ticket.data.datasets[0].data = ticketValues;
+                charts.ticket.update({ duration: 800, easing: 'easeOutQuart' });
+            } else {
+                const ticketCtx = document.getElementById('ticketChart').getContext('2d');
+                charts.ticket = new Chart(ticketCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Novos', 'Em Filtro', 'Resolvidos', 'Fechados'],
+                        datasets: [{
+                            data: ticketValues,
+                            backgroundColor: ['#6366f1', '#f59e0b', '#10b981', '#94a3b8'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    function updateActivityList(devicesData, adData, securityData) {
+        const activityList = document.getElementById('activityList');
+        const activities = [];
+
+        // Atividade de scan
+        if (devicesData.results && devicesData.results.length > 0) {
+            activities.push({
+                icon: 'success',
+                iconClass: 'ph-fill ph-check-circle',
+                title: 'Scan de rede concluído',
+                description: `${devicesData.results.length} dispositivos encontrados`,
+                time: 'Há poucos minutos'
+            });
+        }
+
+        // Atividade de usuários
+        if (adData.active_users > 0) {
+            activities.push({
+                icon: 'info',
+                iconClass: 'ph-fill ph-user-check',
+                title: 'Usuários ativos',
+                description: `${adData.active_users} usuários conectados ao AD`,
+                time: 'Agora'
+            });
+        }
+
+        // Atividade de segurança
+        if (securityData.count > 0) {
+            activities.push({
+                icon: 'warning',
+                iconClass: 'ph-fill ph-warning',
+                title: 'Tentativas de login falhadas',
+                description: `${securityData.count} tentativas nas últimas 24h`,
+                time: 'Últimas 24h'
+            });
+        }
+
+        // Renderizar atividades de forma suave
+        const newHtml = activities.length > 0 ? activities.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon ${activity.icon}">
+                    <i class="${activity.iconClass}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">${activity.title}</div>
+                    <div class="activity-description">${activity.description}</div>
+                    <div class="activity-time">${activity.time}</div>
+                </div>
+            </div>
+        `).join('') : '<div class="activity-item"><div class="activity-content">Sem atividades recentes</div></div>';
+
+        updateListSmooth(activityList, newHtml);
+    }
+
+    function updateListSmooth(container, newHtml) {
+        if (container.innerHTML === newHtml) return;
+
+        container.style.opacity = '0.5';
+        container.style.transition = 'opacity 0.3s ease';
+
+        setTimeout(() => {
+            container.innerHTML = newHtml;
+            container.style.opacity = '1';
+        }, 300);
+    }
+
+    function updateAlertsList(alertsData) {
+        const alertsList = document.getElementById('alertsList');
+        const alerts = [];
+
+        // Alertas de discos cheios
+        if (alertsData.full_disks > 0) {
+            alerts.push({
+                type: 'critical',
+                icon: 'ph-fill ph-hard-drives',
+                title: 'Discos Cheios',
+                description: `${alertsData.full_disks} disco(s) com pouco espaço`,
+                count: alertsData.full_disks
+            });
+        }
+
+        // Alertas de servidores offline
+        if (alertsData.offline_servers > 0) {
+            alerts.push({
+                type: 'critical',
+                icon: 'ph-fill ph-x-circle',
+                title: 'Servidores Offline',
+                description: `${alertsData.offline_servers} servidor(es) não respondendo`,
+                count: alertsData.offline_servers
+            });
+        }
+
+        // Alertas de logins falhados
+        if (alertsData.failed_logins > 10) {
+            alerts.push({
+                type: 'warning',
+                icon: 'ph-fill ph-shield-warning',
+                title: 'Logins Falhados',
+                description: `${alertsData.failed_logins} tentativas suspeitas`,
+                count: alertsData.failed_logins
+            });
+        }
+
+        // Renderizar alertas
+        let newHtml = '';
+        if (alerts.length > 0) {
+            newHtml = alerts.map(alert => `
+                <div class="alert-item ${alert.type}">
+                    <i class="alert-icon ${alert.icon}"></i>
+                    <div class="alert-content">
+                        <div class="alert-title">${alert.title}</div>
+                        <div class="alert-description">${alert.description}</div>
+                    </div>
+                    <div class="alert-count">${alert.count}</div>
+                </div>
+            `).join('');
+        } else {
+            newHtml = `
+                <div class="alert-item info">
+                    <i class="alert-icon ph-fill ph-check-circle"></i>
+                    <div class="alert-content">
+                        <div class="alert-title">Tudo OK!</div>
+                        <div class="alert-description">Nenhum alerta crítico no momento</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        updateListSmooth(alertsList, newHtml);
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Restaurar cache IMEDIATAMENTE para não mostrar zeros/vazio
+        restoreDashboardCache();
+
+        // 2. Buscar dados novos
+        loadDashboardData();
+
+        // 3. Configurar intervalo de atualização (Baseado na Configuração do Servidor)
+        const serverInterval = "{{ general_settings.dashboard_refresh_interval }}";
+        let intervalTime = 30000; // Default 30s
+
+        if (serverInterval && serverInterval != 'None') {
+            intervalTime = parseInt(serverInterval);
+        }
+
+        if (intervalTime > 0) {
+            console.log(`[Dashboard] Atualização automática: ${intervalTime / 1000}s`);
+            updateInterval = setInterval(loadDashboardData, intervalTime);
+        } else {
+            console.log('[Dashboard] Atualização automática DESATIVADA');
+        }
+    });
+
+    // Limpar interval ao sair da página
+    window.addEventListener('beforeunload', () => {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+</script>
+
+{% endblock %}

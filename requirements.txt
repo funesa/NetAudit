@@ -1,0 +1,10 @@
+flask
+flask-session
+requests
+ldap3
+urllib3
+gunicorn
+python-dotenv
+pandas
+sqlalchemy
+alembic

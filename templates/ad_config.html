@@ -1,0 +1,338 @@
+{% extends "layout.html" %}
+
+{% block title %}Configurar AD - NetAudit{% endblock %}
+{% block page_title %}Configuração do Active Directory{% endblock %}
+
+{% block content %}
+<section class="config-container">
+    <div class="config-card">
+        <h3><i class="ph ph-gear"></i> Configurações do Active Directory</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+            Configure a conexão com o Active Directory para habilitar autenticação e gerenciamento de usuários.
+        </p>
+
+
+        <form id="adConfigForm" autocomplete="off">
+            <div class="form-group">
+                <label>Servidor AD (IP ou Hostname)</label>
+                <div class="input-group">
+                    <i class="ph ph-server"></i>
+                    <input type="text" id="adServer" placeholder="192.168.1.10" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Domínio</label>
+                <div class="input-group">
+                    <i class="ph ph-globe"></i>
+                    <input type="text" id="adDomain" placeholder="EMPRESA.LOCAL" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Base DN</label>
+                <div class="input-group">
+                    <i class="ph ph-tree-structure"></i>
+                    <input type="text" id="adBaseDN" placeholder="DC=empresa,DC=local" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Usuário Administrador</label>
+                <div class="input-group">
+                    <i class="ph ph-user-gear"></i>
+                    <input type="text" id="adAdminUser" placeholder="administrador" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Senha do Administrador</label>
+                <div class="input-group">
+                    <i class="ph ph-lock"></i>
+                    <input type="password" id="adAdminPass" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" onclick="testConnection()" class="btn-secondary">
+                    <i class="ph ph-plug"></i> Testar Conexão
+                </button>
+                <button type="submit" class="btn-primary">
+                    <i class="ph ph-check"></i> Salvar Configuração
+                </button>
+            </div>
+        </form>
+
+        <div id="testResult" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="config-card">
+        <h3><i class="ph ph-info"></i> Status da Configuração</h3>
+        <div class="status-grid">
+            <div class="status-item">
+                <span class="status-label">Modo Atual:</span>
+                <span class="status-value" id="currentMode">Modo de Teste</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">AD Configurado:</span>
+                <span class="status-value" id="adConfigured">Não</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Última Conexão:</span>
+                <span class="status-value" id="lastConnection">Nunca</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .config-container {
+        display: grid;
+        gap: 20px;
+        max-width: 800px;
+    }
+
+    .config-card {
+        background: var(--bg-panel);
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .config-card h3 {
+        margin: 0 0 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-main);
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-main);
+        font-weight: 500;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 25px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: var(--text-main);
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+        background: var(--bg-hover);
+        color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+        background: var(--border);
+    }
+
+    .test-result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .test-result.success {
+        background: rgba(74, 222, 128, 0.1);
+        border: 1px solid #4ade80;
+        color: #4ade80;
+    }
+
+    .test-result.error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid var(--status-error);
+        color: var(--status-error);
+    }
+
+    .status-grid {
+        display: grid;
+        gap: 15px;
+    }
+
+    .status-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px;
+        background: var(--bg-app);
+        border-radius: 6px;
+    }
+
+    .status-label {
+        color: var(--text-muted);
+    }
+
+    .status-value {
+        color: var(--text-main);
+        font-weight: 600;
+        text-align: right;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .config-card {
+            padding: 20px;
+        }
+
+        .button-group {
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            width: 100%;
+        }
+
+        .status-item {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-value {
+            text-align: left;
+        }
+    }
+</style>
+
+<script>
+    async function testConnection() {
+        const server = document.getElementById('adServer').value;
+        const domain = document.getElementById('adDomain').value;
+        const baseDN = document.getElementById('adBaseDN').value;
+        const adminUser = document.getElementById('adAdminUser').value;
+        const adminPass = document.getElementById('adAdminPass').value;
+
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'test-result';
+        resultDiv.innerHTML = '<i class="ph ph-spinner"></i> Testando conexão...';
+
+        try {
+            const response = await fetch('/api/ad/test-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    server, domain, baseDN, adminUser, adminPass
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = `
+                    <i class="ph-fill ph-check-circle"></i>
+                    Conexão bem-sucedida! ${data.message}
+                `;
+                // Atualiza o quadro de status abaixo automaticamente
+                loadStatus();
+            } else {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = `
+                    <i class="ph-fill ph-x-circle"></i>
+                    Falha na conexão: ${data.message}
+                `;
+            }
+        } catch (error) {
+            resultDiv.className = 'test-result error';
+            resultDiv.innerHTML = `
+                <i class="ph-fill ph-x-circle"></i>
+                Erro ao testar conexão: ${error.message}
+            `;
+        }
+    }
+
+    document.getElementById('adConfigForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const server = document.getElementById('adServer').value;
+        const domain = document.getElementById('adDomain').value;
+        const baseDN = document.getElementById('adBaseDN').value;
+        const adminUser = document.getElementById('adAdminUser').value;
+        const adminPass = document.getElementById('adAdminPass').value;
+
+        try {
+            const response = await fetch('/api/ad/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    server, domain, baseDN, adminUser, adminPass
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Configuração salva com sucesso!');
+                loadStatus();
+            } else {
+                alert('Erro ao salvar: ' + data.message);
+            }
+        } catch (error) {
+            alert('Erro ao salvar configuração: ' + error.message);
+        }
+    });
+
+    async function loadStatus() {
+        try {
+            const response = await fetch('/api/ad/status');
+            const data = await response.json();
+
+            document.getElementById('currentMode').textContent = data.testMode ? 'Modo de Teste' : 'Modo Produção (AD)';
+            document.getElementById('adConfigured').textContent = data.configured ? 'Sim' : 'Não';
+            document.getElementById('lastConnection').textContent = data.lastConnection || 'Nunca';
+
+            if (data.configured && data.config) {
+                document.getElementById('adServer').value = data.config.server || '';
+                document.getElementById('adDomain').value = data.config.domain || '';
+                document.getElementById('adBaseDN').value = data.config.baseDN || '';
+                document.getElementById('adAdminUser').value = data.config.adminUser || '';
+                // Não preencher a senha por segurança
+            } else {
+                document.getElementById('adServer').value = '';
+                document.getElementById('adDomain').value = '';
+                document.getElementById('adBaseDN').value = '';
+                document.getElementById('adAdminUser').value = '';
+                document.getElementById('adAdminPass').value = ''; // Limpar a senha também
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar status:', error);
+        }
+    }
+
+    loadStatus();
+</script>
+{% endblock %}

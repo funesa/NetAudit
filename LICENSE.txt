@@ -1,0 +1,37 @@
+LICENÇA DE USO DO SOFTWARE NETAUDIT ENTERPRISE
+
+IMPORTANTE: LEIA ATENTAMENTE ANTES DE INSTALAR
+
+Este é um acordo legal entre você (pessoa física ou jurídica) e POFJunior Software ("Licenciante") para o uso do software NetAudit Enterprise ("Software").
+
+AO INSTALAR, COPIAR OU USAR ESTE SOFTWARE, VOCÊ CONCORDA COM OS TERMOS DESTA LICENÇA.
+
+1. CONCESSÃO DE LICENÇA
+O Licenciante concede a você uma licença não exclusiva e intransferível para usar o Software em um único computador ou servidor, conforme o plano de licenciamento adquirido.
+
+2. RESTRIÇÕES
+Você NÃO pode:
+- Copiar, distribuir ou revender o Software sem autorização expressa
+- Realizar engenharia reversa, descompilar ou desmontar o Software
+- Remover ou alterar avisos de direitos autorais
+- Usar o Software para fins ilegais ou não autorizados
+
+3. PROPRIEDADE INTELECTUAL
+O Software é propriedade do Licenciante e está protegido por leis de direitos autorais e tratados internacionais. Todos os direitos não expressamente concedidos são reservados.
+
+4. SUPORTE E ATUALIZAÇÕES
+O suporte técnico e atualizações estão disponíveis apenas para licenças ativas e válidas, conforme os termos do plano contratado.
+
+5. LIMITAÇÃO DE RESPONSABILIDADE
+O Software é fornecido "COMO ESTÁ", sem garantias de qualquer tipo. O Licenciante não se responsabiliza por danos diretos, indiretos, incidentais ou consequenciais decorrentes do uso ou incapacidade de usar o Software.
+
+6. RESCISÃO
+Esta licença é efetiva até ser rescindida. Seus direitos sob esta licença terminarão automaticamente sem aviso do Licenciante se você não cumprir qualquer termo desta licença.
+
+7. DISPOSIÇÕES GERAIS
+Esta licença é regida pelas leis brasileiras. Qualquer litígio será resolvido no foro da comarca do Licenciante.
+
+© 2026 POFJunior Software. Todos os direitos reservados.
+NetAudit Enterprise é uma marca registrada.
+
+Para dúvidas sobre licenciamento, contate: suporte@netaudit.com.br

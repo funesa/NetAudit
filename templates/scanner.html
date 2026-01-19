@@ -1,0 +1,2030 @@
+{% extends "layout.html" %}
+
+{% block title %}Scanner - NetAudit{% endblock %}
+{% block page_title %}Network Scanner{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== SCAN STATUS CARDS ===== */
+    .scan-status-grid {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+        margin-bottom: 30px;
+    }
+
+    /* Card de Status Principal */
+    .status-card-modern.primary-status {
+        /* Liquid Glass Effect */
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+        border-radius: 16px;
+        padding: 24px;
+        color: var(--text-main);
+
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .status-icon {
+        width: 56px;
+        height: 56px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+
+    .status-icon.scanning {
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.4);
+        }
+
+        50% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(129, 140, 248, 0);
+        }
+    }
+
+    .status-info h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .status-subtitle {
+        margin: 4px 0 0 0;
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+
+    /* Barra de Progresso */
+    .progress-container {
+        margin-top: 16px;
+    }
+
+    .progress-bar {
+        height: 12px;
+        background: var(--bg-hover);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid var(--border);
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        border-radius: 6px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        min-width: 0%;
+    }
+
+    .progress-fill.active {
+        animation: progressShine 2s linear infinite;
+    }
+
+    @keyframes progressShine {
+        0% {
+            background-position: -100% 0;
+        }
+
+        100% {
+            background-position: 200% 0;
+        }
+    }
+
+    .progress-text {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--bg-app);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .progress-details {
+        margin-top: 8px;
+        font-size: 0.85rem;
+        opacity: 0.9;
+        text-align: center;
+    }
+
+    /* Grid de Métricas */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 8px;
+        align-items: start;
+    }
+
+    /* Cards de Métricas */
+    /* Cards de Métricas */
+    .metric-card-modern {
+        /* Liquid Glass Effect */
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+        border-radius: 16px;
+        padding: 18px;
+        display: flex;
+        align-items: start;
+        gap: 14px;
+
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+
+    .metric-card-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-card-modern:hover .metric-icon {
+        transform: scale(1.08) rotate(2deg);
+    }
+
+    .metric-card-modern.success {
+        border-left-color: #10b981;
+    }
+
+    .metric-card-modern.info {
+        border-left-color: #3b82f6;
+    }
+
+    .metric-card-modern.warning {
+        border-left-color: #f59e0b;
+    }
+
+    .metric-card-modern.primary {
+        border-left-color: #667eea;
+    }
+
+    .metric-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+        margin-top: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .metric-card-modern.success .metric-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+    }
+
+    .metric-card-modern.info .metric-icon {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+    }
+
+    .metric-card-modern.warning .metric-icon {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+
+    .metric-card-modern.primary .metric-icon {
+        background: rgba(129, 140, 248, 0.1);
+        color: var(--primary);
+    }
+
+    .metric-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .metric-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .metric-value {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: var(--text-main);
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    .metric-unit {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .metric-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .metric-change.positive {
+        color: #10b981;
+    }
+
+    .metric-change.negative {
+        color: #ef4444;
+    }
+
+    .metric-elapsed {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .metric-status {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        line-height: 1.4;
+    }
+
+    .metric-status.aguardando {
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+    }
+
+    .metric-status.escaneando {
+        background: rgba(59, 130, 246, 0.1);
+        color: #58a6ff;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .metric-status.concluido {
+        background: rgba(63, 185, 80, 0.1);
+        color: #3fb950;
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr 1fr;
+            /* Keep 2 cols on mobile for metrics */
+        }
+
+        .status-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .scan-status-grid {
+            gap: 16px;
+        }
+
+        /* Control Bar Responsive */
+        .control-container {
+            border-radius: 20px;
+            padding: 14px;
+        }
+
+        .control-bar {
+            flex-direction: column;
+            align-items: stretch;
+            height: auto;
+            gap: 10px;
+        }
+
+        .input-group {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        #btnScan {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Scheduler Card */
+        .scheduler-compact-card {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .sched-actions-mini {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .mini-input-group {
+            flex: 1;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+            /* 1 col on very small screens */
+        }
+    }
+
+    /* ===== VIEW TOGGLE ===== */
+    .results-section {
+        margin-top: 30px;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 0 4px;
+    }
+
+    .results-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .results-header h2 i {
+        color: var(--primary);
+    }
+
+    /* ===== VIEW TOGGLE PREMIUM ===== */
+    .view-toggle {
+        display: flex;
+        background: var(--bg-panel);
+        padding: 5px;
+        border-radius: 9999px;
+        /* Absolute Pill */
+        gap: 0;
+        border: 1px solid var(--border);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 24px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .toggle-btn i {
+        font-size: 1rem;
+        transition: transform 0.3s;
+    }
+
+    .toggle-btn:hover:not(.active) {
+        color: var(--primary);
+        background: var(--bg-hover);
+    }
+
+    .toggle-btn.active {
+        background: var(--primary);
+        color: var(--bg-app);
+        box-shadow: 0 4px 12px rgba(129, 140, 248, 0.3);
+    }
+
+    .toggle-btn.active i {
+        transform: scale(1.1);
+    }
+
+    /* Contextual Search Focus Polish */
+    #contextSearch {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #contextSearch:hover {
+        border-color: #64748b !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    #contextSearch:focus-within {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px rgba(123, 104, 238, 0.2), 0 4px 12px rgba(123, 104, 238, 0.15) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Apple Intelligence Text Gradient Style - VIBRANT - ALL FIELDS */
+    #contextSearch input,
+    #subnet,
+    #schedSubnet,
+    #schedInterval {
+        background: transparent;
+        color: var(--text-main) !important;
+        font-weight: 700 !important;
+        caret-color: var(--primary);
+        -webkit-text-fill-color: var(--text-main) !important;
+        background-clip: border-box;
+    }
+
+    /* Vibrant Placeholder - ALL FIELDS */
+    #contextSearch input::placeholder,
+    #subnet::placeholder,
+    #schedSubnet::placeholder {
+        background: linear-gradient(90deg, #60a5fa 0%, #c084fc 35%, #f472b6 70%, #fb923c 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        opacity: 0.9 !important;
+        font-weight: 600;
+    }
+
+    .results-header .input-group input::placeholder {
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    /* ===== CARDS VIEW ===== */
+    .cards-container {
+        animation: fadeIn 0.3s ease;
+    }
+
+    .devices-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        padding: 4px;
+    }
+
+    .device-card {
+        /* Liquid Glass Effect */
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+        border-radius: 12px;
+        padding: 20px;
+
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .device-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .device-card.windows {
+        border-left-color: #0078d4;
+    }
+
+    .device-card.printer {
+        border-left-color: #10b981;
+    }
+
+    .device-card.linux {
+        border-left-color: #f59e0b;
+    }
+
+    .device-card.network {
+        border-left-color: #8b5cf6;
+    }
+
+    .device-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .device-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .device-card.windows .device-icon {
+        background: rgba(88, 166, 255, 0.1);
+        color: #58a6ff;
+    }
+
+    .device-card.printer .device-icon {
+        background: rgba(63, 185, 80, 0.1);
+        color: #3fb950;
+    }
+
+    .device-card.linux .device-icon {
+        background: rgba(210, 153, 34, 0.1);
+        color: #d29922;
+    }
+
+    .device-card.network .device-icon {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+
+    .device-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .device-ip {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-main);
+        font-family: 'Courier New', monospace;
+        margin-bottom: 4px;
+    }
+
+    .device-hostname {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .device-details {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .device-detail-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+    }
+
+    .device-detail-row i {
+        color: var(--primary);
+        font-size: 1rem;
+    }
+
+    .device-detail-label {
+        color: var(--text-muted);
+        font-weight: 600;
+        min-width: 70px;
+    }
+
+    .device-detail-value {
+        color: var(--text-main);
+        font-weight: 500;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .device-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .device-badge.high {
+        background: rgba(63, 185, 80, 0.1);
+        color: #3fb950;
+    }
+
+    .device-badge.medium {
+        background: rgba(210, 153, 34, 0.1);
+        color: #d29922;
+    }
+
+    .device-badge.low {
+        background: rgba(248, 81, 73, 0.1);
+        color: #f85149;
+    }
+
+    .device-timestamp {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-size: 0.7rem;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsividade para cards */
+    @media (max-width: 1400px) {
+        .devices-grid {
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .devices-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .view-toggle button span {
+            display: none;
+            /* Hide text on toggle buttons on mobile */
+        }
+
+        .results-header {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 16px;
+        }
+
+        .results-header>div {
+            flex-direction: column;
+            width: 100%;
+            gap: 12px;
+        }
+
+        .results-header .input-group {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .view-toggle {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* ===== SCANNER HEADER ALIGNMENT (PILL WITHIN PILL) ===== */
+    .scanner-header {
+        display: grid;
+        grid-template-columns: auto auto;
+        align-items: start;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .scanner-header .metrics-grid {
+        grid-column: 1 / -1;
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    /* Outer Pill Container */
+    /* Outer Pill Container - MADE TRANSPARENT to fix double-pill issue */
+    .scanner-header .control-container {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        /* REMOVED BACKGROUND */
+        border: none !important;
+        /* REMOVED BORDER */
+        border-radius: 0 !important;
+        padding: 0 !important;
+        /* REMOVED PADDING */
+        height: auto !important;
+        /* AUTO HEIGHT */
+        box-shadow: none !important;
+        /* REMOVED SHADOW */
+        flex: 1;
+        margin: 0 !important;
+    }
+
+    .scanner-header .control-bar {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100%;
+        gap: 10px;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Inner Pill Input Group */
+    .scanner-header .input-group {
+        border: 1.5px solid var(--border) !important;
+        background: var(--bg-panel) !important;
+        border-radius: 9999px !important;
+        padding: 0 20px !important;
+        height: 48px !important;
+        flex: 1;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        margin: 0 !important;
+        align-self: center !important;
+    }
+
+    .scanner-header .input-group:focus-within {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+        background: var(--bg-panel) !important;
+    }
+
+    .scanner-header .input-group i {
+        font-size: 1.2rem;
+        color: var(--primary);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    /* Override global .input-group input styles with MORE SPECIFIC selector */
+    .scanner-header .input-group input[type="text"],
+    .scanner-header .input-group #subnet {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        color: var(--text-main) !important;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+        flex: 1 !important;
+        align-self: center !important;
+    }
+
+    .scanner-header .input-group input::placeholder {
+        color: #94a3b8 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Scan Button Pill Matching */
+    .scanner-header .btn-refresh-pill {
+        height: 48px !important;
+        padding: 0 26px !important;
+        border-radius: 9999px !important;
+        font-size: 0.9rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.05em !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        box-shadow: 0 4px 10px rgba(102, 126, 234, 0.25) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        margin: 0 !important;
+        align-self: center !important;
+        flex-shrink: 0 !important;
+    }
+
+    .scanner-header .btn-refresh-pill:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35) !important;
+    }
+
+    .scanner-header .btn-refresh-pill:active {
+        transform: translateY(0) !important;
+    }
+
+    /* Harmonize Scheduler with Pill Style */
+    .scheduler-compact-card {
+        background: var(--bg-panel) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 9999px !important;
+        padding: 10px 24px !important;
+        height: 68px !important;
+        /* MATCH OUTER SEARCH PILL HEIGHT */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        min-width: 520px;
+        flex: 1;
+        margin: 0 !important;
+    }
+
+    /* Internal items alignment */
+    .sched-info-mini {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px;
+    }
+
+    .sched-actions-mini {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px;
+    }
+
+    #schedSubnet {
+        background: var(--bg-hover) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 9999px !important;
+        padding: 10px 16px !important;
+        height: 42px !important;
+        font-weight: 700;
+        text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        min-width: 170px;
+        transition: all 0.2s;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        align-self: center !important;
+        border: none !important;
+        outline: none !important;
+        line-height: 1 !important;
+    }
+
+    #schedSubnet:focus {
+        border-color: var(--primary) !important;
+        background: var(--bg-panel) !important;
+    }
+
+    .mini-input-group {
+        border-radius: 9999px !important;
+        /* Pill style */
+        border: 1.5px solid var(--border) !important;
+        background: var(--bg-hover) !important;
+        padding: 6px 12px !important;
+        height: 42px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px;
+        margin: 0 !important;
+        align-self: center !important;
+    }
+
+    .mini-input-group:focus-within {
+        border-color: var(--primary) !important;
+        background: var(--bg-panel) !important;
+    }
+
+    #schedInterval {
+        width: 35px !important;
+        font-weight: 800;
+    }
+
+    #schedUnit {
+        color: var(--primary) !important;
+        font-weight: 700 !important;
+        padding-right: 4px !important;
+    }
+
+    @media (max-width: 1200px) {
+        .scanner-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 16px;
+        }
+
+        .scheduler-compact-card {
+            min-width: 0;
+            height: auto !important;
+            flex-direction: column;
+            border-radius: 20px !important;
+            padding: 20px !important;
+            align-items: stretch !important;
+        }
+
+        .sched-actions-mini {
+            width: 100%;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        /* Metrics Grid - Stack on mobile */
+        .metrics-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        /* Control Container - Stack items */
+        .scanner-header .control-container {
+            flex-direction: column !important;
+            height: auto !important;
+            padding: 16px !important;
+            border-radius: 20px !important;
+        }
+
+        .scanner-header .control-bar {
+            flex-direction: column !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+        }
+
+        .scanner-header .input-group {
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        .scanner-header .btn-refresh-pill {
+            width: 100% !important;
+        }
+
+        /* Scheduler Mobile */
+        .sched-actions-mini {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+        .mini-input-group {
+            flex-direction: row;
+            width: 100%;
+        }
+
+        #schedSubnet {
+            width: 100%;
+        }
+
+        /* Results Header Stacking */
+        .results-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .results-header>div {
+            flex-direction: column;
+            width: 100%;
+            align-items: stretch !important;
+            gap: 12px !important;
+        }
+
+        #contextSearch {
+            width: 100% !important;
+        }
+
+        .view-toggle {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .quick-actions-container span {
+            display: none;
+            /* Hide label on mobile */
+        }
+    }
+</style>
+
+<section class="scanner-header">
+    <!-- Cards de Métricas -->
+    <div class="metrics-grid" style="margin-top: 0; margin-bottom: 8px;">
+        <!-- Dispositivos Encontrados -->
+        <div class="metric-card-modern success">
+            <div class="metric-icon">
+                <i class="ph-fill ph-devices"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Dispositivos Encontrados</span>
+                <span class="metric-value" id="stFound">0</span>
+                <span class="metric-change" id="stFoundChange">--</span>
+            </div>
+        </div>
+
+        <!-- Velocidade de Scan -->
+        <div class="metric-card-modern info">
+            <div class="metric-icon">
+                <i class="ph-fill ph-gauge"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Velocidade</span>
+                <span class="metric-value" id="stSpeed">--</span>
+                <span class="metric-unit">IPs/s</span>
+            </div>
+        </div>
+
+        <!-- Tempo Restante -->
+        <div class="metric-card-modern warning">
+            <div class="metric-icon">
+                <i class="ph-fill ph-timer"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Tempo Restante</span>
+                <span class="metric-value" id="stEtr">--</span>
+                <span class="metric-elapsed" id="stElapsed">Decorrido: 0s</span>
+            </div>
+        </div>
+
+        <!-- Tempo Decorrido -->
+        <div class="metric-card-modern primary">
+            <div class="metric-icon">
+                <i class="ph-fill ph-clock"></i>
+            </div>
+            <div class="metric-content">
+                <span class="metric-label">Tempo Total</span>
+                <span class="metric-value" id="stTotal">--</span>
+                <span class="metric-status" id="stStatusBadge">Aguardando</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-container">
+        <div class="control-bar">
+            <!-- Subnet Input Group -->
+            <div class="input-group">
+                <i class="ph ph-network"></i>
+                <input type="text" id="subnet" value="" placeholder="Rede (Ex: 192.168.1.0/24)">
+            </div>
+
+            <!-- Unified Action Button -->
+            <button id="btnScan" onclick="startScan()" class="btn-refresh-pill">
+                <i class="ph-bold ph-lightning"></i>
+                <span>SCAN</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="scheduler-compact-card">
+        <div class="sched-info-mini">
+            <i class="ph-bold ph-calendar-check"></i>
+            <div class="sched-labels">
+                <strong>Scan Automático</strong>
+                <span>Monitoramento em background</span>
+            </div>
+        </div>
+        <div class="sched-actions-mini" style="display: flex; align-items: center; gap: 12px;">
+            <input type="text" id="schedSubnet" placeholder="Subnet (Ex: 192.168.1.0/24)"
+                onchange="saveScheduleConfig()">
+
+            <div class="mini-input-group">
+                <input type="number" id="schedInterval" value="60" min="1" onchange="saveScheduleConfig()">
+                <select id="schedUnit" onchange="saveScheduleConfig()">
+                    <option value="minutes">Minutos</option>
+                    <option value="hours">Horas</option>
+                    <option value="days">Dias</option>
+                </select>
+            </div>
+
+            <label class="switch-ios">
+                <input type="checkbox" id="schedEnabled" onchange="toggleSchedule()">
+                <span class="slider-ios"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Barra de Progresso Linear (Sleek) -->
+    <div id="scanProgressContainer"
+        style="display: none; width: 100%; margin-top: 16px; flex-direction: column; gap: 8px; grid-column: 1 / -1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+            <div style="display:flex; align-items:center; gap: 8px;">
+                <i class="ph-bold ph-spinner-gap anim-spin" style="color: var(--primary); font-size: 1rem;"></i>
+                <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);"
+                    id="progStatusText">Escaneando
+                    rede...</span>
+            </div>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);" id="progPercent">0%</span>
+        </div>
+        <div
+            style="width: 100%; height: 6px; background: var(--bg-hover); border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.2); border: 1px solid var(--border);">
+            <div id="scanProgressBar"
+                style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%); border-radius: 99px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);">
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="progDetailText">Iniciando...</span>
+        </div>
+    </div>
+</section>
+
+
+
+
+<!-- Status Cards Modernos -->
+<!-- Barra de Progresso foi movida para dentro do scanner-header -->
+
+
+
+<!-- Modal do Mapa de Rede -->
+<div class="modal-overlay" id="networkMapModal">
+    <div class="modal-content-large">
+        <div class="modal-header">
+            <h2><i class="ph-fill ph-map-trifold"></i> Mapa de Ocupação da Subnet</h2>
+            <button class="close-btn" onclick="toggleNetworkMap()">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="networkMapGrid" class="network-map-grid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Toggle de Visualização e Resultados -->
+<section class="results-section">
+    <div class="results-header">
+        <h2><i class="ph-fill ph-devices"></i> Dispositivos Encontrados</h2>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Contextual Search -->
+            <!-- Contextual Search with Forced Styling -->
+            <div class="input-group" id="contextSearch"
+                style="height: 44px !important; width: 330px; padding: 0 15px !important; border: 1.5px solid var(--border) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; background: var(--bg-panel) !important; border-radius: 9999px !important;">
+                <i class="ph ph-magnifying-glass" style="font-size: 1.1rem; color: var(--primary);"></i>
+                <input type="text" id="smartSearch" onkeyup="handleSearch()" autocomplete="off"
+                    placeholder="Filtrar por IP, Nome ou Usuário..."
+                    style="font-size: 0.9rem !important; color: var(--text-main) !important; background: transparent !important; border: none !important; width: 100% !important;">
+            </div>
+
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button class="toggle-btn active" data-view="list" onclick="switchView('list')">
+                    <i class="ph-fill ph-list"></i>
+                    <span>Lista</span>
+                </button>
+                <button class="toggle-btn" data-view="cards" onclick="switchView('cards')">
+                    <i class="ph-fill ph-squares-four"></i>
+                    <span>Cards</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualização em Cards -->
+    <div id="cardsView" class="cards-container" style="display: none;">
+        <div id="devicesGrid" class="devices-grid">
+            <!-- Cards serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Visualização em Lista (Tabela) -->
+    <!-- Visualização em Lista (Long Cards) -->
+    <div id="listView" class="list-view-container">
+
+        <!-- Header (Desktop) -->
+        <!-- Header (Desktop) -->
+        <style>
+            .list-header-item.sortable {
+                cursor: pointer;
+                user-select: none;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: color 0.2s;
+            }
+
+            .list-header-item.sortable:hover {
+                color: var(--primary);
+            }
+
+            .list-header-item.sortable i {
+                opacity: 0.3;
+            }
+
+            .list-header-item.sortable.active i {
+                opacity: 1;
+                color: var(--primary);
+            }
+        </style>
+        <div class="list-header grid-scanner">
+            <div class="list-header-item sortable" onclick="sortScanResults('ip')">IP Address <i id="sort-ip"
+                    class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" onclick="sortScanResults('hostname')">Hostname <i id="sort-hostname"
+                    class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" onclick="sortScanResults('user')">Usuário <i id="sort-user"
+                    class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" onclick="sortScanResults('vendor')">Fabricante (OUI) <i
+                    id="sort-vendor" class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" onclick="sortScanResults('os')">Sistema <i id="sort-os"
+                    class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" style="justify-content: center;" onclick="sortScanResults('type')">
+                Tipo <i id="sort-type" class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" onclick="sortScanResults('confidence')">Confiança <i
+                    id="sort-confidence" class="ph-bold ph-caret-up-down"></i></div>
+            <div class="list-header-item sortable" style="justify-content: flex-end;" onclick="sortScanResults('date')">
+                Última Att. <i id="sort-date" class="ph-bold ph-caret-up-down"></i></div>
+        </div>
+
+        <!-- List Container -->
+        <div id="resultsList" style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 40px;">
+            <div style="text-align:center; padding: 60px; color: #64748b;">
+                <i class="ph-bold ph-spinner-gap anim-spin" style="font-size: 2rem;"></i><br>
+                <span>Aguardando dados...</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal de Detalhes -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-premium" id="modalContainer">
+        <!-- Hero Header -->
+        <div class="modal-hero">
+            <div class="hero-icon-wrapper" id="mHeroIcon">
+                <i class="ph-fill ph-monitor"></i>
+            </div>
+            <div class="hero-content">
+                <h2 id="mIpText">--</h2>
+                <div class="hero-subtitle">
+                    <i class="ph-bold ph-identification-card"></i>
+                    <span id="mHostname" class="view-mode">Hostname Indisponível</span>
+                    <input type="text" id="mEditHostname" class="edit-mode"
+                        style="display:none; font-size:1rem; padding:4px; border-radius:4px; border:1px solid var(--border); background:var(--bg-app); color:var(--text-main);">
+                </div>
+            </div>
+            <button id="btnEditDevice" onclick="toggleDeviceEdit()" class="btn-secondary"
+                style="padding: 6px 12px; font-size:0.85rem; display:flex; gap:6px; align-items:center;">
+                <i class="ph-bold ph-pencil"></i> Editar
+            </button>
+            <button id="btnSaveDevice" onclick="saveDevice()" class="btn-primary-glow"
+                style="display:none; padding: 6px 12px; font-size:0.85rem; display:flex; gap:6px; align-items:center;">
+                <i class="ph-bold ph-check"></i> Salvar
+            </button>
+            <button id="btnRdp" onclick="startSeamlessRdp()" class="btn-rdp" style="display: none;" title="Acesso RDP">
+                <i class="ph-fill ph-desktop"></i>
+                <span>RDP</span>
+            </button>
+            <button id="btnUpdateIndividual" onclick="updateIndividual()" class="btn-update-mini"
+                title="Atualizar agora">
+                <i class="ph ph-arrows-clockwise"></i>
+            </button>
+            <button class="btn-icon-close" onclick="closeModal()">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <!-- RDP Theater Mode Container -->
+        <div id="rdpTheater" class="rdp-theater-container" style="display: none;">
+            <div class="rdp-toolbar">
+                <div class="rdp-status">
+                    <span class="status-dot pulsed"></span>
+                    <span id="rdpStatusText">Conectando...</span>
+                </div>
+                <div class="rdp-tools">
+                    <button onclick="sendCtrlAltDel()" class="btn-rdp-tool" title="Ctrl+Alt+Del">
+                        <i class="ph-bold ph-keyboard"></i>
+                    </button>
+                    <button onclick="toggleScale()" class="btn-rdp-tool" id="btnScaleRdp" title="Ajustar Escala">
+                        <i class="ph-bold ph-arrows-out"></i>
+                    </button>
+                    <button onclick="exitRdp()" class="btn-rdp-exit" title="Sair do RDP">
+                        <i class="ph-bold ph-power"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="rdp-canvas-wrapper" id="rdpWrapper">
+                <canvas id="rdpCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="modal-body-premium" id="modalMainBody">
+            <!-- Seção de Alerta/Erro -->
+            <div id="mErrorContainer" class="alert-premium error" style="display: none;">
+                <i class="ph-fill ph-warning-circle"></i>
+                <div class="alert-content">
+                    <strong>Problemas Detectados</strong>
+                    <div id="mErrors"></div>
+                </div>
+            </div>
+
+            <!-- Grid de Informações -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-info"></i> Identidade do Ativo
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-factory"></i> Fabricante</span>
+                        <span class="data-value" id="mVendor">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-fingerprint"></i> Endereço MAC</span>
+                        <span class="data-value" id="mMac">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-device-mobile"></i> Tipo</span>
+                        <span class="data-value view-mode" id="mType">-</span>
+                        <select id="mEditType" class="edit-mode"
+                            style="display:none; padding:4px; border-radius:4px; border:1px solid #ccc; width:100%;">
+                            <option value="windows">Windows</option>
+                            <option value="linux">Linux</option>
+                            <option value="printer">Impressora</option>
+                            <option value="router">Roteador</option>
+                            <option value="switch">Switch</option>
+                            <option value="camera">Câmera</option>
+                            <option value="network">Genérico</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Location/Notes Section -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-map-pin"></i> Localização e Notas
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label">Localização</span>
+                        <span class="data-value view-mode" id="mLocation">-</span>
+                        <input type="text" id="mEditLocation" class="edit-mode"
+                            style="display:none; width:100%; border:1px solid #ccc; border-radius:4px; padding:4px;">
+                    </div>
+                    <div class="data-item-premium" style="grid-column: span 2;">
+                        <span class="data-label">Notas</span>
+                        <span class="data-value view-mode" id="mNotes">-</span>
+                        <textarea id="mEditNotes" class="edit-mode"
+                            style="display:none; width:100%; border:1px solid #ccc; border-radius:4px; padding:4px;"
+                            rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-cpu"></i> Sistema e Hardware
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-laptop"></i> SO / Detalhe</span>
+                        <span class="data-value" id="mOs">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-barcode"></i> Modelo</span>
+                        <span class="data-value" id="mModel">-</span>
+                    </div>
+                    <div class="data-item-premium highlight-user">
+                        <span class="data-label"><i class="ph ph-user"></i> Usuário</span>
+                        <span class="data-value" id="mUser">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-memory"></i> RAM</span>
+                        <span class="data-value" id="mRam">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-processor"></i> Processador</span>
+                        <span class="data-value" id="mCpu">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-clock"></i> Uptime</span>
+                        <span class="data-value" id="mUptime">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printer Section (Dynamic) -->
+            <div id="mPrinterSection" class="result-card-premium"
+                style="display: none; border-left: 4px solid #6366f1;">
+                <div class="card-subtitle"><i class="ph-fill ph-printer"></i> Status da Impressora</div>
+                <div class="printer-grid-mini" style="margin-bottom: 20px;">
+                    <div class="data-item-premium">
+                        <span class="data-label">BIOS / Firmware</span>
+                        <span class="data-value" id="mBios">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label">Serial Number</span>
+                        <span class="data-value" id="mPrinterSerial">-</span>
+                    </div>
+                </div>
+                <div id="mPrinterSupplies"></div>
+            </div>
+
+            <!-- Network Interfaces -->
+            <div class="result-card-premium">
+                <div class="card-subtitle"><i class="ph-fill ph-plug-connected"></i> Adaptadores de Rede</div>
+                <div id="mNics"></div>
+            </div>
+
+            <!-- Disks and Shares -->
+            <div class="result-card-premium">
+                <div class="card-subtitle"><i class="ph-fill ph-hard-drives"></i> Armazenamento e Compartilhamentos
+                </div>
+                <div id="mDisks" style="margin-bottom: 15px;"></div>
+                <div id="mShares"></div>
+            </div>
+
+            <!-- Services -->
+            <div class="result-card-premium">
+                <div class="card-subtitle"><i class="ph-fill ph-list-checks"></i> Serviços Parados (Alerta)</div>
+                <div id="mServices"
+                    style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #64748b;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Subnet -->
+<div class="modal-overlay" id="subnetConfirmModal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2><i class="ph-bold ph-calendar-check"></i> Configurar Scan Automático</h2>
+            <button class="close-btn" onclick="closeSubnetModal()">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                Confirme a Subnet que será monitorada automaticamente pelo sistema:
+            </p>
+            <div class="input-group-modern">
+                <i class="ph ph-network"></i>
+                <input type="text" id="modalSubnetInput" placeholder="Ex: 192.168.1.0/24">
+            </div>
+            <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-secondary" onclick="closeSubnetModal()">Cancelar</button>
+                <button class="btn-primary-glow" onclick="confirmSubnetData()">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Credenciais RDP -->
+<div class="modal-overlay" id="rdpCredentialsModal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2><i class="ph-bold ph-shield-check"></i> Credenciais Windows</h2>
+            <button class="close-btn" onclick="closeRdpCreds()">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 15px; color: var(--text-secondary); font-size: 0.9rem;">
+                Esta máquina exige autenticação prévia (NLA). Informe um usuário e senha com permissão de acesso remoto.
+            </p>
+            <div class="input-group-modern" style="margin-bottom: 12px;">
+                <i class="ph ph-user"></i>
+                <input type="text" id="rdpUser" placeholder="Usuário (Ex: Administrador)">
+            </div>
+            <div class="input-group-modern" style="margin-bottom: 12px;">
+                <i class="ph ph-password"></i>
+                <input type="password" id="rdpPass" placeholder="Senha">
+            </div>
+            <div class="input-group-modern">
+                <i class="ph ph-globe"></i>
+                <input type="text" id="rdpDomain" placeholder="Domínio (Opcional)">
+            </div>
+            <div style="margin-top: 16px; margin-bottom: 8px;">
+                <label
+                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem;">
+                    <input type="checkbox" id="rdpSaveCreds" style="width: 18px; height: 18px; cursor: pointer;">
+                    <i class="ph ph-floppy-disk"></i>
+                    <span>Salvar credenciais neste navegador</span>
+                </label>
+            </div>
+            <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-secondary" onclick="closeRdpCreds()">Cancelar</button>
+                <button class="btn-primary-glow" onclick="confirmRdpCreds()">
+                    Conectar Agora
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='premium-modal.css') }}?v=20">
+<link rel="stylesheet" href="{{ url_for('static', filename='list-layout.css') }}">
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='scanner.js') }}?v=14"></script>
+
+<script>
+    // ===== ATUALIZAÇÃO DOS CARDS DE STATUS =====
+    let scanStartTime = null;
+    let lastDeviceCount = 0;
+    let statusInterval = null;
+
+    function updateStatusCards(data) {
+        const { running, results, progress, total, scanned, etr } = data;
+
+        // Elementos
+        const statusIcon = document.getElementById('statusIcon');
+        const stStatus = document.getElementById('stStatus');
+        const stSubtitle = document.getElementById('stSubtitle');
+        const progBar = document.getElementById('progBar');
+        const progText = document.getElementById('progText');
+        const progDetails = document.getElementById('progDetails');
+        const stFound = document.getElementById('stFound');
+        const stFoundChange = document.getElementById('stFoundChange');
+        const stSpeed = document.getElementById('stSpeed');
+        const stEtr = document.getElementById('stEtr');
+        const stElapsed = document.getElementById('stElapsed');
+        const stTotal = document.getElementById('stTotal');
+        const stStatusBadge = document.getElementById('stStatusBadge');
+
+        if (running) {
+            // ESCANEANDO
+            if (!scanStartTime) {
+                scanStartTime = Date.now();
+                lastDeviceCount = results.length;
+            }
+
+            // Atualizar status principal
+            statusIcon.className = 'ph-fill ph-broadcast scanning';
+            stStatus.textContent = 'Escaneando Rede';
+            stSubtitle.textContent = `Analisando ${total} endereços IP...`;
+
+            // Barra de progresso
+            const progressPercent = total > 0 ? Math.round((scanned / total) * 100) : 0;
+            progBar.style.width = `${progressPercent}%`;
+            progBar.classList.add('active');
+            progText.textContent = `${progressPercent}%`;
+            progDetails.textContent = `${scanned} de ${total} IPs escaneados`;
+
+            // Dispositivos encontrados
+            stFound.textContent = results.length;
+            const deviceChange = results.length - lastDeviceCount;
+            if (deviceChange > 0) {
+                stFoundChange.textContent = `+${deviceChange} novos`;
+                stFoundChange.className = 'metric-change positive';
+            } else {
+                stFoundChange.textContent = 'Buscando...';
+                stFoundChange.className = 'metric-change';
+            }
+
+            // Velocidade de scan
+            const elapsed = (Date.now() - scanStartTime) / 1000; // segundos
+            const speed = scanned > 0 ? (scanned / elapsed).toFixed(1) : '0.0';
+            stSpeed.textContent = speed;
+
+            // Tempo restante
+            stEtr.textContent = etr || 'Calculando...';
+            stElapsed.textContent = `Decorrido: ${formatTime(elapsed)}`;
+
+            // Tempo total
+            stTotal.textContent = formatTime(elapsed);
+            stStatusBadge.textContent = 'Escaneando';
+            stStatusBadge.className = 'metric-status escaneando';
+
+        } else {
+            // CONCLUÍDO ou AGUARDANDO
+            if (scanStartTime) {
+                // CONCLUÍDO
+                const totalTime = (Date.now() - scanStartTime) / 1000;
+
+                statusIcon.className = 'ph-fill ph-check-circle';
+                stStatus.textContent = 'Scan Concluído';
+                stSubtitle.textContent = `${results.length} dispositivos encontrados em ${formatTime(totalTime)}`;
+
+                progBar.style.width = '100%';
+                progBar.classList.remove('active');
+                progText.textContent = '100%';
+                progDetails.textContent = `${total} de ${total} IPs escaneados`;
+
+                stFound.textContent = results.length;
+                stFoundChange.textContent = 'Concluído';
+                stFoundChange.className = 'metric-change';
+
+                stSpeed.textContent = (total / totalTime).toFixed(1);
+
+                stEtr.textContent = '0s';
+                stElapsed.textContent = `Total: ${formatTime(totalTime)}`;
+
+                stTotal.textContent = formatTime(totalTime);
+                stStatusBadge.textContent = 'Concluído';
+                stStatusBadge.className = 'metric-status concluido';
+
+                // Reset após 3 segundos
+                setTimeout(() => {
+                    scanStartTime = null;
+                }, 3000);
+
+            } else {
+                // AGUARDANDO
+                statusIcon.className = 'ph-fill ph-broadcast';
+                stStatus.textContent = 'Aguardando Scan';
+                stSubtitle.textContent = 'Clique em SCAN para iniciar';
+
+                progBar.style.width = '0%';
+                progBar.classList.remove('active');
+                progText.textContent = '0%';
+                progDetails.textContent = '0 de 0 IPs escaneados';
+
+                stFound.textContent = results.length;
+                stFoundChange.textContent = results.length > 0 ? `${results.length} no banco` : '--';
+                stFoundChange.className = 'metric-change';
+
+                stSpeed.textContent = '--';
+
+                stEtr.textContent = '--';
+                stElapsed.textContent = 'Decorrido: 0s';
+
+                stTotal.textContent = '--';
+                stStatusBadge.textContent = 'Aguardando';
+                stStatusBadge.className = 'metric-status aguardando';
+            }
+        }
+    }
+
+    function formatTime(seconds) {
+        if (seconds < 60) {
+            return `${Math.round(seconds)}s`;
+        } else if (seconds < 3600) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.round(seconds % 60);
+            return `${mins}m ${secs}s`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${mins}m`;
+        }
+    }
+
+    // Integrar com o polling existente
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+        return originalFetch.apply(this, args).then(response => {
+            // Se for a rota de status, atualizar cards
+            if (args[0] && args[0].includes('/status')) {
+                response.clone().json().then(data => {
+                    updateStatusCards(data);
+
+                    if (data && data.results) {
+                        devicesData = data.results;
+                        const searchInput = document.getElementById('smartSearch');
+                        if (searchInput && searchInput.value) {
+                            handleSearch();
+                        } else {
+                            if (currentView === 'cards') populateCards(devicesData);
+                            if (currentView === 'list' && typeof renderTable === 'function') renderTable(devicesData);
+                        }
+                    }
+                }).catch(() => { });
+            }
+            return response;
+        });
+    };
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', () => {
+        // Buscar status inicial
+        fetch('/status')
+            .then(r => r.json())
+            .then(data => updateStatusCards(data))
+            .catch(console.error);
+    });
+
+    // ===== VIEW SWITCHING =====
+    let currentView = 'list';
+    let devicesData = [];
+
+
+    function switchView(view) {
+        currentView = view;
+
+        // Atualizar botões
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+        // Alternar visualizações
+        const listView = document.getElementById('listView');
+        const cardsView = document.getElementById('cardsView');
+
+        if (view === 'list') {
+            listView.style.display = 'block';
+            cardsView.style.display = 'none';
+        } else {
+            listView.style.display = 'none';
+            cardsView.style.display = 'block';
+
+            // Buscar dados da API para popular cards
+            loadDevicesForCards();
+        }
+
+        // Salvar preferência
+        localStorage.setItem('scannerView', view);
+    }
+
+    // ===== INTEGRATED SEARCH LOGIC =====
+    function handleSearch() {
+        const query = document.getElementById('smartSearch').value.toLowerCase().trim();
+        const dataToFilter = (typeof scanResults !== 'undefined' && scanResults.length > 0) ? scanResults : devicesData;
+
+        if (!query) {
+            if (typeof renderTable === 'function') renderTable(dataToFilter);
+            if (currentView === 'cards') populateCards(dataToFilter);
+            return;
+        }
+
+        const tokens = query.split(/\s+/);
+        const filtered = dataToFilter.filter(item => {
+            const searchString = [
+                item.ip,
+                item.hostname || '',
+                item.user || '',
+                item.vendor || '',
+                item.os_detail || '',
+                item.model || '',
+                item.device_type || '',
+                item.mac || ''
+            ].join(' ').toLowerCase();
+            return tokens.every(token => searchString.includes(token));
+        });
+
+        // Update active view
+        if (typeof renderTable === 'function') renderTable(filtered);
+        if (currentView === 'cards') populateCards(filtered);
+    }
+
+    // Make it global so the onkeyup event can find it
+    window.handleSearch = handleSearch;
+
+    async function loadDevicesForCards() {
+        try {
+            const response = await fetch('/status');
+            const data = await response.json();
+
+            if (data && data.results) {
+                devicesData = data.results;
+                populateCards(devicesData);
+            } else {
+                populateCards([]);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dispositivos:', error);
+            populateCards([]);
+        }
+    }
+
+    function populateCards(devices) {
+        const grid = document.getElementById('devicesGrid');
+
+        if (!devices || devices.length === 0) {
+            grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #64748b;">
+                <i class="ph-fill ph-magnifying-glass" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p style="margin-top: 16px; font-size: 1.1rem;">Nenhum dispositivo encontrado</p>
+                <p style="font-size: 0.9rem; opacity: 0.7;">Execute um scan para descobrir dispositivos na rede</p>
+            </div>
+        `;
+            return;
+        }
+
+        grid.innerHTML = devices.map(device => {
+            // Encontrar o índice original para o openModal
+            const originalIndex = scanResults.findIndex(item => item.ip === device.ip);
+            return createDeviceCard(device, originalIndex);
+        }).join('');
+    }
+
+    function createDeviceCard(device, index) {
+        const deviceType = getDeviceType(device.device_type);
+        const icon = getDeviceIcon(device.device_type);
+        const confidence = getConfidenceBadge(device.confidence);
+        const timestamp = formatTimestamp(device.last_updated_at);
+
+        return `
+        <div class="device-card ${deviceType}" onclick="openModal(${index})">
+            <span class="device-timestamp">${timestamp}</span>
+            
+            <div class="device-card-header">
+                <div class="device-icon">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="device-info">
+                    <div class="device-ip">${device.ip}</div>
+                    <div class="device-hostname">${device.hostname || 'N/A'}</div>
+                </div>
+            </div>
+            
+            <div class="device-details">
+                ${device.user && device.user !== 'N/A' ? `
+                <div class="device-detail-row">
+                    <i class="ph-fill ph-user"></i>
+                    <span class="device-detail-label">Usuário:</span>
+                    <span class="device-detail-value">${device.user}</span>
+                </div>
+                ` : ''}
+                
+                ${device.vendor && device.vendor !== '-' ? `
+                <div class="device-detail-row">
+                    <i class="ph-fill ph-factory"></i>
+                    <span class="device-detail-label">Fabricante:</span>
+                    <span class="device-detail-value">${device.vendor}</span>
+                </div>
+                ` : ''}
+                
+                ${device.os_detail && device.os_detail !== 'N/A' ? `
+                <div class="device-detail-row">
+                    <i class="ph-fill ph-desktop-tower"></i>
+                    <span class="device-detail-label">Sistema:</span>
+                    <span class="device-detail-value">${device.os_detail}</span>
+                </div>
+                ` : ''}
+                
+                <div class="device-detail-row">
+                    <i class="ph-fill ph-shield-check"></i>
+                    <span class="device-detail-label">Confiança:</span>
+                    ${confidence}
+                </div>
+            </div>
+        </div>
+    `;
+    }
+
+    function getDeviceType(type) {
+        if (!type) return 'network';
+        if (type.includes('windows')) return 'windows';
+        if (type.includes('printer')) return 'printer';
+        if (type.includes('linux')) return 'linux';
+        return 'network';
+    }
+
+    function getDeviceIcon(deviceType) {
+        // Retornar ícone baseado no tipo de dispositivo
+        if (!deviceType) return 'ph-fill ph-devices';
+
+        const type = deviceType.toLowerCase();
+
+        if (type.includes('windows')) return 'ph-fill ph-windows-logo';
+        if (type.includes('printer')) return 'ph-fill ph-printer';
+        if (type.includes('linux')) return 'ph-fill ph-linux-logo';
+        if (type.includes('server')) return 'ph-fill ph-hard-drives';
+        if (type.includes('router') || type.includes('switch')) return 'ph-fill ph-router';
+        if (type.includes('mobile') || type.includes('phone')) return 'ph-fill ph-device-mobile';
+
+        return 'ph-fill ph-devices';
+    }
+
+    function getConfidenceBadge(confidence) {
+        if (!confidence) return '<span class="device-badge low">Baixa</span>';
+
+        const conf = confidence.toLowerCase();
+        if (conf.includes('alta') || conf.includes('wmi')) {
+            return '<span class="device-badge high">Alta</span>';
+        } else if (conf.includes('média') || conf.includes('media')) {
+            return '<span class="device-badge medium">Média</span>';
+        }
+        return '<span class="device-badge low">Baixa</span>';
+    }
+
+    function formatTimestamp(timestamp) {
+        if (!timestamp) return '--';
+
+        try {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return 'Agora';
+            if (diffMins < 60) return `${diffMins}m atrás`;
+
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}h atrás`;
+
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays < 7) return `${diffDays}d atrás`;
+
+            return date.toLocaleDateString('pt-BR');
+        } catch {
+            return '--';
+        }
+    }
+
+    function openDeviceModal(index) {
+        if (typeof openModal === 'function') {
+            openModal(index);
+        }
+    }
+
+    // Interceptar atualizações de dados para atualizar cards
+    const originalUpdateTable = window.updateTable || function () { };
+    window.updateTable = function (data) {
+        devicesData = data || [];
+
+        // Atualizar tabela (view original)
+        if (typeof originalUpdateTable === 'function') {
+            originalUpdateTable(data);
+        }
+
+        // Atualizar cards se estiver nessa view
+        if (currentView === 'cards') {
+            populateCards(devicesData);
+        }
+    };
+
+    // Carregar preferência salva
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedView = localStorage.getItem('scannerView');
+        if (savedView && savedView === 'cards') {
+            switchView('cards');
+        }
+    });
+</script>
+
+
+<!-- Toast Notification -->
+<div id="scanToast" style="
+    position: fixed; 
+    bottom: 30px; 
+    right: 30px; 
+    background: var(--bg-panel); 
+    padding: 16px 24px; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--border); 
+    display: flex; 
+    align-items: center; 
+    gap: 16px; 
+    z-index: 9999; 
+    transform: translateY(100px); 
+    opacity: 0; 
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+">
+    <div style="
+        width: 40px; 
+        height: 40px; 
+        background: #10b981; 
+        border-radius: 10px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    ">
+        <i class="ph-bold ph-check" style="font-size: 1.5rem;"></i>
+    </div>
+    <div>
+        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main);">Scan Concluído</h4>
+        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--text-secondary);" id="toastMessage">Varredura
+            finalizada com
+            sucesso.</p>
+    </div>
+    <button onclick="hideToast()"
+        style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px;">
+        <i class="ph-bold ph-x"></i>
+    </button>
+</div>
+<script>
+    function hideToast() {
+        const toast = document.getElementById('scanToast');
+        if (toast) {
+            toast.style.transform = 'translateY(100px)';
+            toast.style.opacity = '0';
+        }
+    }
+</script>
+{% endblock %}
+```

@@ -6,6 +6,10 @@ import threading
 import time
 import platform
 
+# Carregar variáveis de ambiente do .env
+from dotenv import load_dotenv
+load_dotenv()
+
 # Prevenir abertura de janelas em subprocessos no Windows
 CREATE_NO_WINDOW = 0x08000000 if platform.system() == 'Windows' else 0
 import json
@@ -502,12 +506,17 @@ def get_full_audit(ip, user, password):
                 
                 # Executa o script PowerShell avançado
                 ps_script = resource_path(os.path.join("scripts", "audit_windows.ps1"))
-                ps_cmd = [
-                    "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", 
-                    "-File", ps_script, "-Ip", ip, 
-                    "-User", user, "-Password", password,
-                    "-TryFallback"
-                ]
+                
+                # Escapamos aspas simples na senha
+                password_escaped = password.replace("'", "''")
+                
+                # Construímos comando usando -Command para converter senha em SecureString
+                script_block = f"""& {{
+                    $p = ConvertTo-SecureString '{password_escaped}' -AsPlainText -Force;
+                    & '{ps_script}' -Ip '{ip}' -User '{user}' -Password $p -TryFallback
+                }}"""
+                
+                ps_cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script_block]
                 
                 audit_proc = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
                 

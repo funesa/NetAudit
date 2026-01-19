@@ -1,7 +1,6 @@
 import PyInstaller.__main__
 import os
 import shutil
-import sys
 
 # 1. Configurações
 APP_NAME = "NetAudit_System"
@@ -14,31 +13,23 @@ if os.path.exists("build"):
 if os.path.exists("dist"):
     shutil.rmtree("dist")
 
-print(f"🔨 Iniciando compilacao do {APP_NAME} (Modo Robusto - Onedir)...")
+print(f"🔨 Iniciando compilacao do {APP_NAME} (Arquivo Único Otimizado)...")
 
-# 3. Localizar python312.dll
-python_dll = os.path.join(sys.base_prefix, "python312.dll")
-if not os.path.exists(python_dll):
-    print(f"⚠️  AVISO: python312.dll não encontrado em {python_dll}")
-    python_dll = None
-
-# 4. Argumentos do PyInstaller (ONEDIR para evitar problemas de DLL)
+# 3. Argumentos do PyInstaller
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onedir',                    # <-- MUDANÇA: Gera pasta com exe + DLLs (mais estável)
+    '--onefile',                   # Volta para arquivo único
     '--noconsole',                 
     '--clean',
+    '--noupx',                     # Desabilita UPX (evita problemas de DLL)
     
     # Incluir Pastas Importantes
     '--add-data=templates;templates',
     '--add-data=static;static',
     '--add-data=scripts;scripts',
     
-    # Incluir python312.dll explicitamente
-    f'--add-binary={python_dll};.' if python_dll else '',
-    
-    # Imports Ocultos Expandidos
+    # Imports Ocultos Essenciais
     '--hidden-import=engineio.async_drivers.threading',
     '--hidden-import=socketio',
     '--hidden-import=flask_socketio',
@@ -55,8 +46,11 @@ args = [
     '--hidden-import=jinja2',
     '--hidden-import=dotenv',
     '--hidden-import=psutil',
+    '--hidden-import=win32com.client',
+    '--hidden-import=win32api',
+    '--hidden-import=win32con',
     
-    # Coletar todos os subpacotes
+    # Coletar todos os subpacotes críticos
     '--collect-all=customtkinter',
     '--collect-all=flask',
     '--collect-all=ldap3',
@@ -65,29 +59,15 @@ args = [
     '--exclude-module=tkinter.test',
     '--exclude-module=matplotlib',
     '--exclude-module=scipy',
+    '--exclude-module=pytest',
 ]
-
-# Remover strings vazias
-args = [a for a in args if a]
 
 # Adicionar ícone se existir
 if os.path.exists(ICON_PATH):
     args.append(f'--icon={ICON_PATH}')
 
-# 5. Rodar o PyInstaller
+# 4. Rodar o PyInstaller
 PyInstaller.__main__.run(args)
 
-# 6. Criar um launcher.bat para facilitar execução
-dist_folder = os.path.join("dist", APP_NAME)
-if os.path.exists(dist_folder):
-    launcher_bat = os.path.join("dist", f"Iniciar_{APP_NAME}.bat")
-    with open(launcher_bat, "w") as f:
-        f.write(f"""@echo off
-cd /d "%~dp0"
-start "" "{APP_NAME}\\{APP_NAME}.exe"
-""")
-    print(f"\n✅ Sucesso! O executável está na pasta 'dist/{APP_NAME}/'.")
-    print(f"👉 Execute: dist/Iniciar_{APP_NAME}.bat")
-    print(f"👉 Ou diretamente: dist/{APP_NAME}/{APP_NAME}.exe")
-else:
-    print(f"\n✅ Compilação concluída!")
+print(f"\n✅ Sucesso! O executável está em 'dist/'.")
+print(f"👉 dist/{APP_NAME}.exe")

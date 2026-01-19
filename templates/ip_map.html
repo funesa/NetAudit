@@ -1,0 +1,645 @@
+{% extends "layout.html" %}
+{% block title %}Mapa de IPs{% endblock %}
+{% block page_title %}Mapa Inteligente de IPs{% endblock %}
+
+{% block content %}
+<style>
+    .ip-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--bg-panel);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+    }
+
+    .stat-card.free {
+        border-left-color: #10b981;
+    }
+
+    .stat-card.probably-free {
+        border-left-color: #f59e0b;
+    }
+
+    .stat-card.in-use {
+        border-left-color: #3b82f6;
+    }
+
+    .stat-card.online {
+        border-left-color: #8b5cf6;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 8px 0;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .glass-panel {
+        background: var(--bg-panel);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        margin-bottom: 20px;
+    }
+
+    .ip-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 6px;
+        margin-top: 20px;
+        max-width: 100%;
+        max-height: 70vh;
+        /* Limit height and allow scroll inside grid if needed */
+        overflow-y: auto;
+    }
+
+    .ip-cell {
+        aspect-ratio: 1;
+        padding: 8px 4px;
+        border-radius: 6px;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ip-cell:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+    }
+
+    .ip-cell.free {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+        font-weight: 700;
+    }
+
+    .ip-cell.probably-free {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+
+    .ip-cell.in-use {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+    }
+
+    .ip-cell.online {
+        background: rgba(139, 92, 246, 0.1);
+        color: #a78bfa;
+        font-weight: 700;
+    }
+
+    .ip-cell.selected {
+        border-color: #7b68ee;
+        box-shadow: 0 0 0 3px rgba(123, 104, 238, 0.3);
+        transform: scale(1.15);
+        z-index: 20;
+    }
+
+    .ip-details {
+        background: var(--bg-hover);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+        border: 1px solid var(--primary);
+    }
+
+    .ip-details.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        padding: 12px;
+        background: var(--bg-hover);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    .filter-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .filter-bar select,
+    .filter-bar input {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    .btn-suggest {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-suggest:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(123, 104, 238, 0.3);
+    }
+
+    /* Auto-refresh config */
+    .auto-refresh-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 16px;
+        color: white;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .auto-refresh-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .auto-refresh-info i {
+        font-size: 1.5rem;
+    }
+
+    .auto-refresh-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .auto-refresh-controls input,
+    .auto-refresh-controls select {
+        padding: 6px 10px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .switch-ios {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+    }
+
+    .switch-ios input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider-ios {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.3);
+        transition: 0.4s;
+        border-radius: 28px;
+    }
+
+    .slider-ios:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+    }
+
+    input:checked+.slider-ios:before {
+        transform: translateX(22px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .filter-bar input,
+        .filter-bar select {
+            width: 100% !important;
+        }
+
+        .btn-primary,
+        .btn-suggest {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .auto-refresh-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .auto-refresh-controls {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .ip-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<!-- Stats Cards -->
+<div class="ip-stats">
+    <div class="stat-card free">
+        <div class="stat-label"><i class="ph ph-check-circle"></i> IPs Livres</div>
+        <div class="stat-value" id="statFree">0</div>
+    </div>
+
+    <div class="stat-card probably-free">
+        <div class="stat-label"><i class="ph ph-warning"></i> Provavelmente Livres</div>
+        <div class="stat-value" id="statProbablyFree">0</div>
+    </div>
+
+    <div class="stat-card in-use">
+        <div class="stat-label"><i class="ph ph-desktop"></i> Em Uso</div>
+        <div class="stat-value" id="statInUse">0</div>
+    </div>
+
+    <div class="stat-card online">
+        <div class="stat-label"><i class="ph ph-check-circle"></i> Online Agora</div>
+        <div class="stat-value" id="statOnline">0</div>
+    </div>
+</div>
+
+<!-- Auto-Refresh Configuration -->
+<div class="auto-refresh-card">
+    <div class="auto-refresh-info">
+        <i class="ph-bold ph-clock-clockwise"></i>
+        <div>
+            <strong style="font-size: 1rem;">Atualização Automática</strong>
+            <div style="font-size: 0.85rem; opacity: 0.9;">Monitoramento inteligente de IPs livres</div>
+        </div>
+    </div>
+    <div class="auto-refresh-controls">
+        <input type="number" id="refreshInterval" value="5" min="1" max="60" style="width: 60px;">
+        <select id="refreshUnit">
+            <option value="minutes" selected>Minutos</option>
+            <option value="hours">Horas</option>
+        </select>
+        <label class="switch-ios">
+            <input type="checkbox" id="autoRefreshEnabled" onchange="toggleAutoRefresh()">
+            <span class="slider-ios"></span>
+        </label>
+    </div>
+</div>
+
+<!-- Filters (Standardized) -->
+<div class="control-container" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+    <div class="control-bar" style="justify-content: space-between; width: 100%;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="input-group"
+                style="width: 250px; border-radius: 9999px; background: var(--bg-hover) !important; border: 1px solid var(--border) !important;">
+                <i class="ph ph-network"></i>
+                <input type="text" id="subnetInput" placeholder="Ex: 192.168.1.0/24" autocomplete="off"
+                    style="color: var(--text-main) !important;">
+            </div>
+
+            <div
+                style="display: flex; align-items: center; gap: 8px; background: var(--bg-hover); padding: 4px 12px; border-radius: 9999px; border: 1px solid var(--border);">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Dias sem uso:</span>
+                <select id="daysThreshold"
+                    style="border: none; background: transparent; font-weight: 600; color: var(--text-main); outline: none;">
+                    <option value="1">1 dia</option>
+                    <option value="3">3 dias</option>
+                    <option value="7" selected>7 dias</option>
+                    <option value="14">14 dias</option>
+                    <option value="30">30 dias</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-primary" onclick="loadIPMap()"
+                style="height: 48px; border-radius: 9999px; padding: 0 24px;">
+                <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
+
+            <button class="btn-suggest" onclick="suggestIP()" style="height: 48px; border-radius: 9999px;">
+                <i class="ph-bold ph-lightbulb"></i> Sugerir IP
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Panel -->
+<div class="glass-panel">
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(16, 185, 129, 0.2);"></div>
+            <span>Livre (nunca usado)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(245, 158, 11, 0.2);"></div>
+            <span>Provavelmente Livre (>X dias)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(59, 130, 246, 0.2);"></div>
+            <span>Em Uso (visto recentemente)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(139, 92, 246, 0.2);"></div>
+            <span>Online (hoje)</span>
+        </div>
+    </div>
+
+    <!-- IP Grid -->
+    <div id="ipGrid" class="ip-grid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b;">
+            Clique em Atualizar para carregar o mapa de IPs...
+        </div>
+    </div>
+
+    <!-- IP Details -->
+    <div id="ipDetails" class="ip-details">
+        <h3 style="margin-top: 0; color: var(--text-main);">Detalhes do IP: <span id="detailIP">-</span></h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div>
+                <strong>Status:</strong> <span id="detailStatus">-</span>
+            </div>
+            <div>
+                <strong>Hostname:</strong> <span id="detailHostname">-</span>
+            </div>
+            <div>
+                <strong>MAC:</strong> <span id="detailMAC">-</span>
+            </div>
+            <div>
+                <strong>Última Conexão:</strong> <span id="detailLastSeen">-</span>
+            </div>
+            <div>
+                <strong>Tipo:</strong> <span id="detailType">-</span>
+            </div>
+            <div>
+                <strong>Fabricante:</strong> <span id="detailManufacturer">-</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allIPs = [];
+    let selectedIP = null;
+
+    async function loadIPMap() {
+        const subnet = document.getElementById('subnetInput').value;
+        const days = document.getElementById('daysThreshold').value;
+        const grid = document.getElementById('ipGrid');
+
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><i class="ph-bold ph-spinner-gap anim-spin" style="font-size: 2rem; color: var(--primary);"></i><br>Analisando histórico de IPs...</div>';
+
+        try {
+            const res = await fetch(`/api/ip-map?subnet=${encodeURIComponent(subnet)}&days=${days}`);
+            const data = await res.json();
+
+            allIPs = data.ips;
+            renderIPGrid(allIPs);
+            updateStats(data.stats);
+        } catch (e) {
+            console.error(e);
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: red;">Erro ao carregar mapa de IPs</div>';
+        }
+    }
+
+    function renderIPGrid(ips) {
+        const grid = document.getElementById('ipGrid');
+        grid.innerHTML = '';
+
+        ips.forEach(ip => {
+            const cell = document.createElement('div');
+            cell.className = `ip-cell ${ip.status}`;
+            cell.textContent = ip.ip.split('.').slice(-1)[0]; // Mostrar apenas último octeto
+            cell.title = `${ip.ip}\n${ip.hostname || 'Sem hostname'}\nStatus: ${ip.status}`;
+            cell.onclick = () => showIPDetails(ip);
+            grid.appendChild(cell);
+        });
+    }
+
+    function showIPDetails(ip) {
+        // Remover seleção anterior
+        document.querySelectorAll('.ip-cell').forEach(cell => cell.classList.remove('selected'));
+
+        // Selecionar novo
+        event.target.classList.add('selected');
+
+        selectedIP = ip;
+
+        document.getElementById('detailIP').textContent = ip.ip;
+        document.getElementById('detailStatus').textContent = ip.status.replace('_', ' ').toUpperCase();
+        document.getElementById('detailHostname').textContent = ip.hostname || 'N/A';
+        document.getElementById('detailMAC').textContent = ip.mac || 'N/A';
+        document.getElementById('detailLastSeen').textContent = ip.last_seen
+            ? `${ip.last_seen_days} dia(s) atrás`
+            : 'Nunca visto';
+        document.getElementById('detailType').textContent = ip.device_type || 'Desconhecido';
+        document.getElementById('detailManufacturer').textContent = ip.manufacturer || 'N/A';
+
+        document.getElementById('ipDetails').classList.add('show');
+    }
+
+    function updateStats(stats) {
+        document.getElementById('statFree').textContent = stats.free;
+        document.getElementById('statProbablyFree').textContent = stats.probably_free;
+        document.getElementById('statInUse').textContent = stats.in_use;
+        document.getElementById('statOnline').textContent = stats.online;
+    }
+
+    async function suggestIP() {
+        const subnet = document.getElementById('subnetInput').value;
+        const days = document.getElementById('daysThreshold').value;
+
+        try {
+            const res = await fetch(`/api/ip-map/suggest?subnet=${encodeURIComponent(subnet)}&days=${days}`);
+            const suggestion = await res.json();
+
+            if (suggestion.error) {
+                alert(suggestion.error);
+            } else {
+                showIPDetails(suggestion);
+
+                // Destacar na grid
+                document.querySelectorAll('.ip-cell').forEach(cell => {
+                    if (cell.textContent === suggestion.ip.split('.').slice(-1)[0]) {
+                        cell.classList.add('selected');
+                        cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+
+                alert(`IP Sugerido: ${suggestion.ip}\n\nEste IP está livre e pode ser usado!`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao sugerir IP');
+        }
+    }
+
+    // Auto-refresh functionality
+    let autoRefreshTimer = null;
+
+    function toggleAutoRefresh() {
+        const enabled = document.getElementById('autoRefreshEnabled').checked;
+        const interval = parseInt(document.getElementById('refreshInterval').value);
+        const unit = document.getElementById('refreshUnit').value;
+
+        // Save to localStorage
+        localStorage.setItem('ipMapAutoRefresh', JSON.stringify({
+            enabled: enabled,
+            interval: interval,
+            unit: unit
+        }));
+
+        if (enabled) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh(); // Clear any existing timer
+
+        const interval = parseInt(document.getElementById('refreshInterval').value);
+        const unit = document.getElementById('refreshUnit').value;
+
+        let milliseconds = interval * 60 * 1000; // Default to minutes
+        if (unit === 'hours') {
+            milliseconds = interval * 60 * 60 * 1000;
+        }
+
+        const enabled = document.getElementById('autoRefreshEnabled').checked;
+        if (!enabled) return; // Prevent start if not checked
+
+        console.log(`Auto-refresh iniciado: ${interval} ${unit}`);
+
+        autoRefreshTimer = setInterval(() => {
+            console.log('Atualizando mapa de IPs automaticamente...');
+            loadIPMap();
+        }, milliseconds);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+            console.log('Auto-refresh parado');
+        }
+    }
+
+    // Load saved settings on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        loadIPMap();
+
+        // Load saved auto-refresh settings
+        const saved = localStorage.getItem('ipMapAutoRefresh');
+        if (saved) {
+            try {
+                const settings = JSON.parse(saved);
+                document.getElementById('refreshInterval').value = settings.interval || 5;
+                document.getElementById('refreshUnit').value = settings.unit || 'minutes';
+                document.getElementById('autoRefreshEnabled').checked = settings.enabled || false;
+
+                if (settings.enabled) {
+                    startAutoRefresh();
+                }
+            } catch (e) {
+                console.error('Erro ao carregar configurações:', e);
+            }
+        }
+
+        // Update auto-refresh when interval/unit changes
+        document.getElementById('refreshInterval').addEventListener('change', function () {
+            if (document.getElementById('autoRefreshEnabled').checked) {
+                toggleAutoRefresh();
+            }
+        });
+
+        document.getElementById('refreshUnit').addEventListener('change', function () {
+            if (document.getElementById('autoRefreshEnabled').checked) {
+                toggleAutoRefresh();
+            }
+        });
+    });
+</script>
+{% endblock %}

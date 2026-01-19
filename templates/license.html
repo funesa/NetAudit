@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+
+{% block page_title %}Ativação de Licença{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="glass-panel text-center">
+            <div style="margin-bottom: 30px;">
+                <i class="ph-duotone ph-shield-check" style="font-size: 4rem; color: var(--accent-color);"></i>
+            </div>
+
+            <h2>Ativar NetAudit Enterprise PRO</h2>
+            <p class="text-muted" style="margin-bottom: 30px;">
+                Desbloqueie todos os recursos: Active Directory, Helpdesk Premium, Atena IA e Usuários Ilimitados.
+            </p>
+
+            <div class="status-card"
+                style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 30px; text-align: left;">
+                <div style="margin-bottom: 10px;">
+                    <strong>Hardware ID:</strong>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <code
+                            style="background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 4px; flex-grow: 1;">{{ hwid }}</code>
+                        <button class="btn-icon" onclick="navigator.clipboard.writeText('{{ hwid }}')" title="Copiar">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Envie este ID para seu fornecedor para gerar sua licença.</small>
+                </div>
+            </div>
+
+            <form id="licenseForm" onsubmit="activateLicense(event)">
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <i class="ph ph-key"></i>
+                    <input type="text" id="licenseKey" placeholder="Cole sua chave de licença aqui..." required
+                        style="width: 100%;">
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                    <i class="ph ph-check-circle"></i>
+                    Validar e Ativar
+                </button>
+            </form>
+
+            <div id="activationResult" style="margin-top: 20px; display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function activateLicense(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerHTML;
+        const key = document.getElementById('licenseKey').value;
+        const resultDiv = document.getElementById('activationResult');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Validando...';
+        resultDiv.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/license/activate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: key })
+            });
+
+            const data = await response.json();
+
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.innerHTML = `<div class="status-badge status-online" style="justify-content: center; padding: 15px;">
+                <i class="ph ph-check-circle"></i> ${data.message}
+            </div>`;
+                setTimeout(() => window.location.href = '/', 2000);
+            } else {
+                resultDiv.innerHTML = `<div class="status-badge status-offline" style="justify-content: center; padding: 15px;">
+                <i class="ph ph-x-circle"></i> ${data.message}
+            </div>`;
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (err) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="status-badge status-offline">Erro ao conectar ao servidor</div>`;
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
+{% endblock %}

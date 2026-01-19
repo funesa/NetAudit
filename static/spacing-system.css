@@ -1,0 +1,231 @@
+/* ===== PROFESSIONAL SPACING SYSTEM ===== */
+
+/* Design Tokens - Spacing Scale */
+:root {
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+}
+
+/* Consistent Component Spacing */
+.stat-glass-card,
+.glass-panel,
+.card,
+.table-container,
+.control-bar {
+    margin-bottom: var(--space-lg);
+}
+
+/* Prevent cramped layouts */
+.stats-grid-modern,
+.metrics-grid,
+.dashboard-grid-modern {
+    margin-bottom: var(--space-xl);
+}
+
+/* Better touch targets for mobile */
+button,
+.btn-glass,
+.action-btn,
+.nav-item {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Generous padding for readability */
+.panel-body,
+.modal-body,
+.content-area {
+    line-height: 1.6;
+}
+
+/* Consistent border radius */
+.stat-glass-card {
+    border-radius: var(--radius-lg);
+}
+
+.glass-panel,
+.card {
+    border-radius: var(--radius-xl);
+}
+
+.input-group,
+.nav-item {
+    border-radius: var(--radius-md);
+}
+
+/* Better visual hierarchy */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-bottom: var(--space-md);
+    line-height: 1.3;
+}
+
+p {
+    margin-bottom: var(--space-sm);
+}
+
+/* Prevent text from touching edges */
+.detail-val,
+.stat-value,
+.card-value {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Comfortable list spacing */
+.user-stats-list,
+.inactive-list {
+    gap: var(--space-sm);
+}
+
+.user-stat-item,
+.inactive-item {
+    padding: var(--space-md);
+}
+
+/* Better form spacing */
+input[type="text"],
+input[type="password"],
+select,
+textarea {
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+/* Generous modal spacing */
+.modal-header {
+    padding: var(--space-lg) var(--space-xl);
+}
+
+.modal-body {
+    padding: var(--space-xl);
+}
+
+/* Better table breathing room */
+th {
+    padding: var(--space-lg) var(--space-xl);
+}
+
+td {
+    padding: var(--space-lg) var(--space-xl);
+}
+
+/* Prevent elements from touching viewport edges */
+@media (max-width: 768px) {
+    .content-area {
+        padding: var(--space-lg);
+    }
+
+    main {
+        padding: var(--space-lg);
+    }
+
+    .control-bar {
+        padding: var(--space-md) var(--space-lg);
+    }
+}
+
+/* Extra breathing room on large screens */
+@media (min-width: 1920px) {
+    .content-area {
+        padding: var(--space-2xl);
+    }
+
+    main {
+        padding: var(--space-2xl);
+    }
+
+    .stats-grid-modern,
+    .metrics-grid {
+        gap: var(--space-xl);
+    }
+}
+
+/* Prevent cramped hover states */
+.card:hover,
+.stat-glass-card:hover,
+.glass-panel:hover {
+    transform: translateY(-3px);
+}
+
+/* Better focus states */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+.nav-item:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Comfortable click areas */
+.btn-icon-small {
+    min-width: 36px;
+    min-height: 36px;
+    padding: var(--space-xs);
+}
+
+/* Prevent text from being too close to icons */
+.stat-content,
+.user-stat-info {
+    padding-left: var(--space-xs);
+}
+
+/* Better chart spacing */
+.chart-container {
+    margin: var(--space-lg) 0;
+    padding: var(--space-md);
+}
+
+/* Comfortable legend spacing */
+.legend-item,
+.map-legend>* {
+    padding: var(--space-sm);
+    margin-right: var(--space-md);
+}
+
+/* Better badge spacing */
+.tag,
+.vendor-badge,
+.user-stat-badge {
+    padding: var(--space-xs) var(--space-sm);
+    margin: 0 var(--space-xs);
+}
+
+/* Prevent cramped sections */
+.inactive-section {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+}
+
+/* Better quick actions spacing */
+.quick-actions-modern {
+    padding: var(--space-lg) var(--space-xl);
+    gap: var(--space-xl);
+}
+
+.actions-buttons {
+    gap: var(--space-md);
+}
+
+/* Comfortable health metrics */
+.health-item {
+    margin-bottom: var(--space-lg);
+}
+
+.health-header {
+    margin-bottom: var(--space-md);
+}

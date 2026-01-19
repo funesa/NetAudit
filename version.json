@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.3",
-  "download_url": "https://github.com/funesa/NetAudit/releases/download/v2026.1.3/NetAudit_System.zip",
-  "release_notes": "Versão 2026.1.3: Correção DEFINITIVA - Empacotamento robusto com todas as DLLs incluídas + Fix de janelas piscando."
+  "latest_version": "2026.1.4",
+  "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_System.exe",
+  "release_notes": "Versão 2026.1.4: ATUALIZAÇÃO MAJOR - Migração para SQLite, Gestão Segura de Credenciais, Otimizações de Performance e Limpeza de Código. Preparação para Monitoramento em Tempo Real."
 }

@@ -1,0 +1,1955 @@
+{% extends "layout.html" %}
+
+{% block title %}Chamados - NetAudit{% endblock %}
+{% block page_title %}Meus Chamados{% endblock %}
+
+{% block content %}
+<style>
+    /* LIQUID GLASS THEME SYSTEM */
+    :root {
+        --brand: #818cf8;
+        --brand-glow: rgba(129, 140, 248, 0.4);
+        --bg-main: #0b0e14;
+        --glass-bg: rgba(21, 25, 33, 0.8);
+        --glass-border: rgba(240, 246, 252, 0.1);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        --text-p: #f0f6fc;
+        --text-s: #8b949e;
+        --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* GLOBAL ANIMATIONS */
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-entry {
+        animation: slideUpFade 0.6s var(--ease-spring) backwards;
+    }
+
+    /* MAIN CONTAINER & HEADER */
+    .tickets-view {
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(240, 246, 252, 0.05);
+    }
+
+    .header-content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .header-content span {
+        color: var(--brand);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    .header-content h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--text-p);
+        margin: 0;
+        background: -webkit-linear-gradient(135deg, #f0f6fc, #8b949e);
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    /* ACTION BAR */
+    .actions-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    /* PILL BUTTONS */
+    .btn-pill {
+        height: 48px;
+        padding: 0 24px;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.3s var(--ease-spring);
+        border: none;
+    }
+
+    .btn-pill.primary {
+        background: linear-gradient(135deg, var(--brand) 0%, #4f46e5 100%);
+        color: white;
+        box-shadow: 0 4px 15px var(--brand-glow), 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-pill.primary:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 25px var(--brand-glow);
+    }
+
+    .btn-pill.secondary {
+        background: #1c2128;
+        color: var(--text-s);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-pill.secondary:hover {
+        background: #22272e;
+        color: var(--brand);
+        border-color: var(--brand);
+        transform: translateY(-2px);
+    }
+
+    /* FILTER BAR */
+    .filter-bar {
+        background: rgba(21, 25, 33, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 6px;
+        border-radius: 9999px;
+        display: inline-flex;
+        gap: 6px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(240, 246, 252, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .filter-btn {
+        padding: 10px 24px;
+        border-radius: 9999px;
+        border: none;
+        background: transparent;
+        color: var(--text-s);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn:hover {
+        color: var(--brand);
+    }
+
+    .filter-btn.active {
+        background: var(--brand);
+        color: var(--bg-app);
+        box-shadow: 0 4px 12px var(--brand-glow);
+        font-weight: 700;
+    }
+
+    /* LIQUID CARDS */
+    .tickets-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+        margin-bottom: 80px;
+    }
+
+    .ticket-card {
+        display: grid;
+        grid-template-columns: 90px minmax(250px, 2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) 140px minmax(150px, 1fr) 60px;
+        align-items: center;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 20px 30px;
+        transition: all 0.3s var(--ease-spring);
+        opacity: 0;
+        animation: slideUpFade 0.5s var(--ease-spring) forwards;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .ticket-card:hover {
+        background: rgba(34, 39, 46, 0.9);
+        transform: translateY(-4px) scale(1.005);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        border-color: var(--brand);
+        z-index: 10;
+    }
+
+    /* CARD TYPOGRAPHY */
+    .t-id {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 800;
+        color: var(--brand);
+        font-size: 0.9rem;
+    }
+
+    .t-title {
+        font-weight: 700;
+        color: var(--text-p);
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+
+    .t-requester {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-s);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .t-location,
+    .t-category {
+        color: var(--text-s);
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .t-location i,
+    .t-category i {
+        color: var(--brand);
+        opacity: 0.7;
+    }
+
+    .t-meta {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    /* ACTION BUTTONS */
+    .btn-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 1px solid var(--glass-border);
+        background: transparent;
+        color: var(--text-s);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s var(--ease-spring);
+        font-size: 1.2rem;
+    }
+
+    .btn-icon:hover {
+        background: var(--brand);
+        color: var(--bg-app);
+        border-color: var(--brand);
+        transform: rotate(15deg);
+        box-shadow: 0 4px 12px var(--brand-glow);
+    }
+
+    /* STATUS PILLS */
+    .status-pill {
+        padding: 6px 16px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .s-new {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .s-proc {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .s-solv {
+        background: #dcfce7;
+        color: #10b981;
+    }
+
+    .s-clos {
+        background: #f1f5f9;
+        color: #94a3b8;
+    }
+
+    /* LOADING & EMPTY STATES */
+    .empty-state {
+        text-align: center;
+        padding: 80px 0;
+        color: var(--text-s);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+    }
+
+    /* DRAWER STYLES REDESIGNED */
+    .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.2);
+        backdrop-filter: blur(4px);
+        z-index: 9990;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s;
+    }
+
+    .drawer-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: 700px;
+        max-width: 90vw;
+        background: var(--bg-panel);
+        z-index: 9999;
+        transform: translateX(105%);
+        transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: -20px 0 50px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+    }
+
+    .drawer.active {
+        transform: translateX(0);
+    }
+
+    .drawer-header {
+        background: var(--bg-panel);
+        padding: 30px 40px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    /* List Header */
+    .list-header {
+        display: grid;
+        grid-template-columns: 90px minmax(250px, 2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) 140px minmax(150px, 1fr) 60px;
+        padding: 0 30px 15px 30px;
+        color: var(--text-s);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Responsiveness */
+    @media (max-width: 1024px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .list-header {
+            display: none;
+        }
+
+        .ticket-card {
+            grid-template-columns: 1fr;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .t-id {
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .t-meta {
+            text-align: left;
+            flex-direction: row;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .ticket-card>div {
+            justify-content: flex-start !important;
+        }
+
+        .btn-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+    }
+
+    /* Response Toggle */
+    .response-mode {
+        background: transparent;
+        border: 1px solid #e2e8f0;
+        color: var(--text-s);
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .response-mode:hover {
+        background: #f8fafc;
+    }
+
+    .response-mode.active {
+        background: var(--brand);
+        color: var(--bg-app);
+        border-color: var(--brand);
+        box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+    }
+
+    .response-mode.active#mode-solution {
+        background: #10b981;
+        border-color: #10b981;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Metadata Cards */
+    .meta-card {
+        background: var(--bg-hover);
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: transform 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .meta-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+
+    .meta-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.7;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .meta-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-p);
+        line-height: 1.4;
+    }
+
+    /* Visual Variants */
+    .mc-date {
+        border-left: 4px solid #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .mc-date .meta-label {
+        color: #1d4ed8;
+    }
+
+    .mc-prio {
+        border-left: 4px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.05);
+    }
+
+    .mc-prio .meta-label {
+        color: #b45309;
+    }
+
+    .mc-cat {
+        border-left: 4px solid #8b5cf6;
+        background: rgba(139, 92, 246, 0.05);
+    }
+
+    .mc-cat .meta-label {
+        color: #6d28d9;
+    }
+
+    .mc-user {
+        border-left: 4px solid #10b981;
+        background: rgba(16, 185, 129, 0.05);
+    }
+
+    .mc-user .meta-label {
+        color: #047857;
+    }
+
+    .meta-icon-bg {
+        position: absolute;
+        right: -10px;
+        bottom: -15px;
+        font-size: 4rem;
+        opacity: 0.05;
+        transform: rotate(-15deg);
+    }
+
+    .sort-btn:hover {
+        background: rgba(34, 39, 46, 0.95);
+        border-color: var(--brand);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    /* TICKET SEARCH BAR */
+    .search-container {
+        margin-bottom: 30px;
+    }
+
+    .control-bar-tickets {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .sort-dropdown {
+        position: relative;
+    }
+
+    .sort-btn {
+        height: 52px;
+        padding: 0 24px;
+        border-radius: 9999px;
+        border: 1px solid var(--border);
+        background: var(--bg-panel);
+        color: var(--text-p);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s var(--ease-spring);
+    }
+
+    .sort-btn:hover {
+        background: var(--bg-hover);
+        border-color: var(--brand);
+        transform: translateY(-2px);
+    }
+
+    .sort-menu {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        min-width: 220px;
+        background: var(--bg-panel);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        padding: 8px;
+        display: none;
+        z-index: 100;
+    }
+
+    .sort-menu.active {
+        display: block;
+        animation: slideUpFade 0.3s var(--ease-spring);
+    }
+
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .sort-option {
+        padding: 12px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text-p);
+        transition: all 0.2s;
+    }
+
+    .sort-option:hover {
+        background: var(--bg-hover);
+        color: var(--brand);
+    }
+
+    .sort-option.active {
+        background: var(--primary-light);
+        color: var(--brand);
+        font-weight: 700;
+    }
+
+    /* STATS GRID */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: all 0.3s var(--ease-spring);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--brand);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-card i {
+        font-size: 1.8rem;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text-p);
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-s);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stat-icon-bg {
+        position: absolute;
+        right: -10px;
+        bottom: -10px;
+        font-size: 5rem;
+        opacity: 0.03;
+        transform: rotate(-15deg);
+    }
+
+    .sc-new {
+        border-bottom: 4px solid #ef4444;
+    }
+
+    .sc-proc {
+        border-bottom: 4px solid #f59e0b;
+    }
+
+    .sc-solv {
+        border-bottom: 4px solid #10b981;
+    }
+
+    .sc-total {
+        border-bottom: 4px solid var(--brand);
+    }
+
+    /* Pulse animation for notification badge */
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+    }
+
+    /* PREMIUM GLASS STANDARDS */
+    .premium-glass-card-force {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.25);
+        border-left: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-radius: 24px;
+        padding: 40px;
+        transition: all 0.3s ease;
+    }
+
+    .input-wrapper-glass-force {
+        position: relative;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 99px;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        transition: all 0.2s ease;
+        height: 52px;
+    }
+
+    .input-wrapper-glass-force:focus-within {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    }
+
+    .input-wrapper-glass-force i {
+        color: #94a3b8;
+        font-size: 1.2rem;
+        margin-right: 12px;
+    }
+
+    .input-wrapper-glass-force input {
+        background: transparent !important;
+        border: none !important;
+        color: #fff !important;
+        width: 100%;
+        height: 100%;
+        font-size: 0.95rem;
+        font-weight: 500;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Fix to prevent white background on autofill */
+    .input-wrapper-glass-force input:-webkit-autofill,
+    .input-wrapper-glass-force input:-webkit-autofill:hover,
+    .input-wrapper-glass-force input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #fff !important;
+        -webkit-box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0.4) inset !important;
+        transition: background-color 5000s ease-in-out 0s;
+    }
+</style>
+
+<!-- MAIN VIEW -->
+<div id="tickets-view" class="tickets-view animate-entry">
+    <div class="page-header">
+        <div class="header-content">
+            <span class="animate-entry" style="animation-delay: 0.1s">Gestão de Infraestrutura</span>
+            <h2 class="animate-entry" style="animation-delay: 0.2s">Meus Chamados</h2>
+        </div>
+        <div class="actions-row animate-entry" style="animation-delay: 0.3s">
+            <div id="glpi-user-info"
+                style="display: none; align-items: center; gap: 8px; color: var(--text-s); font-weight: 600; font-size: 0.9rem;">
+                <i class="ph-fill ph-user-circle" style="font-size: 1.2rem; color: var(--brand);"></i>
+                <span id="glpi-active-user"
+                    style="color: var(--text-p); text-transform: none; letter-spacing: 0;">User</span>
+            </div>
+            <button id="btn-refresh" class="btn-pill secondary">
+                <i class="ph-bold ph-arrows-clockwise"></i> Sincronizar
+            </button>
+            <button id="btn-add-ticket" class="btn-pill primary">
+                <i class="ph-bold ph-plus"></i> Novo Chamado
+            </button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD STATS -->
+    <div class="stats-grid animate-entry" style="animation-delay: 0.3s">
+        <div class="stat-card sc-new">
+            <i class="ph-fill ph-warning-circle" style="color: #ef4444;"></i>
+            <div class="stat-value" id="stat-new">0</div>
+            <div class="stat-label">Novos</div>
+            <i class="ph ph-warning-circle stat-icon-bg"></i>
+        </div>
+        <div class="stat-card sc-proc">
+            <i class="ph-fill ph-clock-afternoon" style="color: #f59e0b;"></i>
+            <div class="stat-value" id="stat-proc">0</div>
+            <div class="stat-label">Em Aberto</div>
+            <i class="ph ph-clock stat-icon-bg"></i>
+        </div>
+        <div class="stat-card sc-solv">
+            <i class="ph-fill ph-check-circle" style="color: #10b981;"></i>
+            <div class="stat-value" id="stat-solv">0</div>
+            <div class="stat-label">Resolvidos</div>
+            <i class="ph ph-check-circle stat-icon-bg"></i>
+        </div>
+        <div class="stat-card sc-total">
+            <i class="ph-fill ph-chart-bar" style="color: var(--brand);"></i>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Total GERAL</div>
+            <i class="ph ph-chart-bar stat-icon-bg"></i>
+        </div>
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="search-container animate-entry" style="animation-delay: 0.4s">
+        <div class="control-bar-tickets" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+            <div class="input-group"
+                style="height: 52px; flex: 1; border-radius: 9999px; background: var(--bg-panel) !important;">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="search-input" placeholder="Buscar por ID, título, descrição..."
+                    autocomplete="off"
+                    style="font-weight: 700 !important; color: var(--text-p) !important; background: transparent !important;">
+                <button id="search-clear" class="search-clear"
+                    style="background:transparent; border:none; color:var(--text-s); cursor:pointer; display:none; align-items:center;">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <div class="sort-dropdown">
+                <button class="sort-btn" id="sort-btn">
+                    <i class="ph-bold ph-sort-ascending"></i>
+                    <span id="sort-label">Mais Recentes</span>
+                    <i class="ph-bold ph-caret-down" style="font-size: 0.8rem;"></i>
+                </button>
+                <div class="sort-menu" id="sort-menu">
+                    <div class="sort-option active" data-sort="date-desc">
+                        <i class="ph-bold ph-calendar-x"></i>
+                        <span>Mais Recentes</span>
+                    </div>
+                    <div class="sort-option" data-sort="date-asc">
+                        <i class="ph-bold ph-calendar-check"></i>
+                        <span>Mais Antigos</span>
+                    </div>
+                    <div class="sort-option" data-sort="priority-desc">
+                        <i class="ph-bold ph-warning-circle"></i>
+                        <span>Maior Prioridade</span>
+                    </div>
+                    <div class="sort-option" data-sort="priority-asc">
+                        <i class="ph-bold ph-check-circle"></i>
+                        <span>Menor Prioridade</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar animate-entry" style="animation-delay: 0.5s">
+        <button class="filter-btn active" data-filter="not_solved">Pendentes</button>
+        <button class="filter-btn" data-filter="solved">Resolvidos</button>
+        <button class="filter-btn" data-filter="closed">Fechados</button>
+        <button class="filter-btn" data-filter="all">Todos</button>
+    </div>
+
+    <!-- Headers (Desktop) -->
+    <div class="list-header animate-entry" style="animation-delay: 0.5s">
+        <div>ID</div>
+        <div>Título / Assunto</div>
+        <div>Solicitante</div>
+        <div>Localização</div>
+        <div>Categoria</div>
+        <div>Status</div>
+        <div style="text-align: right;">Datas (Abertura/Att)</div>
+        <div style="text-align: right;">Ações</div>
+    </div>
+
+    <!-- CONTENT LIST -->
+    <div id="tickets-list-container" class="tickets-grid">
+        <!-- JS INJECTED -->
+    </div>
+
+    <!-- LOADING SHIMMER COMPONENT -->
+    <div id="loading-state" style="display: none; padding: 20px;">
+        <div
+            style="height: 80px; width: 100%; border-radius: 20px; background: rgba(255,255,255,0.5); margin-bottom: 16px; animation: pulse 1.5s infinite;">
+        </div>
+        <div
+            style="height: 80px; width: 100%; border-radius: 20px; background: rgba(255,255,255,0.5); margin-bottom: 16px; animation: pulse 1.5s infinite;">
+        </div>
+        <div
+            style="height: 80px; width: 100%; border-radius: 20px; background: rgba(255,255,255,0.5); margin-bottom: 16px; animation: pulse 1.5s infinite;">
+        </div>
+        <style>
+            @keyframes pulse {
+                0% {
+                    opacity: 0.6;
+                }
+
+                50% {
+                    opacity: 0.3;
+                }
+
+                100% {
+                    opacity: 0.6;
+                }
+            }
+        </style>
+    </div>
+</div>
+
+<!-- SETUP VIEW (PREMIUM REDESIGN) -->
+<div id="setup-view"
+    style="display: none; padding: 60px 0; flex-direction: column; align-items: center; justify-content: center;">
+    <div class="premium-glass-card-force animate-entry" style="width: 450px; max-width: 95%; text-align: center;">
+        <div style="margin-bottom: 32px;">
+            <div
+                style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2)); color: #818cf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 25px rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.3);">
+                <i class="ph-bold ph-plugs-connected" style="font-size: 2.2rem;"></i>
+            </div>
+            <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 8px; letter-spacing: -0.02em;">
+                Conexão Necessária</h2>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin: 0; line-height: 1.5;">Conecte sua API GLPI para
+                centralizar a gestão de chamados e ativos da infraestrutura.</p>
+        </div>
+
+        <div style="text-align: left;">
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">URL
+                    do GLPI</label>
+                <div class="input-wrapper-glass-force">
+                    <i class="ph-bold ph-globe"></i>
+                    <input type="text" id="glpi-url" placeholder="https://glpi.empresa.com/apirest.php"
+                        autocomplete="off">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">App
+                    Token</label>
+                <div class="input-wrapper-glass-force">
+                    <i class="ph-bold ph-key"></i>
+                    <input type="text" id="glpi-app-token" placeholder="Token da API" autocomplete="off">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase;">Usuário</label>
+                    <div class="input-wrapper-glass-force">
+                        <i class="ph-bold ph-user"></i>
+                        <input type="text" id="glpi-user" placeholder="Login" autocomplete="off">
+                    </div>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase;">Senha</label>
+                    <div class="input-wrapper-glass-force">
+                        <i class="ph-bold ph-lock"></i>
+                        <input type="password" id="glpi-pass" placeholder="••••" autocomplete="new-password">
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-connect" class="js-connect-btn btn-pill primary"
+                style="width: 100%; justify-content: center; height: 52px; font-size: 1rem;">Conectar na
+                Plataforma</button>
+            <p id="config-msg"
+                style="margin-top: 15px; color: #f87171; font-size: 0.85rem; text-align: center; font-weight: 600; min-height: 20px;">
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- NEW TICKET MODAL -->
+<div id="modal-new-ticket" class="drawer-overlay" style="display: flex; align-items: center; justify-content: center;">
+    <div
+        style="background: var(--bg-panel); width: 500px; max-width: 90vw; padding: 40px; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid var(--border);">
+        <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 24px;">Novo Chamado</h3>
+
+        <div style="margin-bottom: 20px;">
+            <label
+                style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">TÍTULO</label>
+            <input type="text" id="nt-title" class="form-control" placeholder="Resumo do problema..."
+                style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; background: var(--bg-app); color: var(--text-main);">
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <label
+                style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">DESCRIÇÃO</label>
+            <textarea id="nt-content" rows="4" placeholder="Detalhes da solicitação..."
+                style="width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; resize: none; background: var(--bg-app); color: var(--text-main);"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div>
+                <label
+                    style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">CATEGORIA</label>
+                <select id="nt-category"
+                    style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-app); color: var(--text-main);">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div>
+                <label
+                    style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">LOCALIZAÇÃO</label>
+                <select id="nt-location"
+                    style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-app); color: var(--text-main);">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div>
+                <label
+                    style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">URGÊNCIA</label>
+                <select id="nt-urgency"
+                    style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-app); color: var(--text-main);">
+                    <option value="1">Muito Baixa</option>
+                    <option value="2">Baixa</option>
+                    <option value="3" selected>Média</option>
+                    <option value="4">Alta</option>
+                    <option value="5">Muito Alta</option>
+                </select>
+            </div>
+            <div>
+                <label
+                    style="display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">IMPACTO</label>
+                <select id="nt-impact"
+                    style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-app); color: var(--text-main);">
+                    <option value="1">Muito Baixo</option>
+                    <option value="2">Baixo</option>
+                    <option value="3" selected>Médio</option>
+                    <option value="4">Alto</option>
+                    <option value="5">Muito Alto</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+            <button onclick="closeNewTicket()" class="btn-pill secondary"
+                style="flex: 1; justify-content: center;">Cancelar</button>
+            <button id="btn-create-submit" onclick="submitNewTicket()" class="btn-pill primary"
+                style="flex: 2; justify-content: center;">Criar Chamado</button>
+        </div>
+    </div>
+</div>
+
+<!-- SIDE DRAWER (DETAILS) -->
+<div id="drawer-overlay" class="drawer-overlay"></div>
+<div id="supreme-drawer" class="drawer">
+    <div class="drawer-header">
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span id="d-id-tag"
+                    style="background: var(--text-p); color: white; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace;">#0000</span>
+                <span id="d-status-pill"></span>
+            </div>
+            <h3 id="d-title-text"
+                style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text-p); line-height: 1.3;">-</h3>
+        </div>
+        <div id="close-drawer" class="btn-icon" style="flex-shrink: 0;"><i class="ph-bold ph-x"></i></div>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 30px;">
+        <!-- Loading State -->
+        <div id="d-shimmer" style="display: none;">
+            <div style="height: 200px; background: var(--bg-hover); margin-bottom: 20px; border-radius: 16px;"></div>
+        </div>
+
+        <div id="d-content-real" style="display: none;">
+            <!-- Metadata Grid -->
+            <!-- Metadata Grid -->
+            <div id="d-meta-grid"
+                style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+                <!-- Injected via JS -->
+            </div>
+
+            <div
+                style="background: var(--bg-hover); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 30px; display: flex; align-items: center; gap: 10px;">
+                <div
+                    style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                    Técnico Atribuído:</div>
+                <div id="d-assignee" style="font-weight: 600; color: var(--text-main);">-</div>
+            </div>
+
+            <div
+                style="margin-bottom: 12px; font-weight: 800; color: var(--brand); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
+                Descrição</div>
+            <div id="d-desc-html"
+                style="background: var(--bg-app); padding: 25px; border-radius: 20px; border: 1px solid var(--border); line-height: 1.6; color: var(--text-main); margin-bottom: 40px;">
+                <!-- Content -->
+            </div>
+
+            <div
+                style="margin-bottom: 12px; font-weight: 800; color: var(--brand); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
+                Linha do Tempo</div>
+            <div id="d-timeline-wrap"
+                style="position: relative; padding-left: 20px; border-left: 2px solid var(--border);">
+                <!-- Timeline items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer for Reply -->
+    <div style="padding: 20px 30px; background: var(--bg-panel); border-top: 1px solid var(--border);">
+        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+            <button id="mode-followup" class="response-mode active" onclick="setResponseMode('followup')">
+                <i class="ph-bold ph-chat-circle-text"></i> Acompanhamento
+            </button>
+            <button id="mode-solution" class="response-mode" onclick="setResponseMode('solution')">
+                <i class="ph-bold ph-check-circle"></i> Solução
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: flex-end;">
+            <textarea id="followup-text" placeholder="Escrever resposta..."
+                style="flex: 1; padding: 14px; border: 1px solid var(--border); border-radius: 16px; resize: none; min-height: 50px; font-family: inherit; font-size: 0.95rem; background: var(--bg-app); color: var(--text-main);"></textarea>
+            <button id="btn-send-followup" class="btn-pill primary"
+                style="width: 50px; padding: 0; justify-content: center; height: 50px;">
+                <i class="ph-bold ph-paper-plane-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* REUSING THE LOGIC BUT UPDATING RENDER FUNCTIONS TO MATCH NEW HTML STRUCTURE */
+    (function () {
+        let currentFilter = 'not_solved';
+        const detailCache = new Map();
+
+        // --- NOTIFICATION & AUTO-REFRESH SYSTEM ---
+        let autoRefreshInterval = null;
+        let lastTicketIds = new Set();
+        const AUTO_REFRESH_INTERVAL = 60000; // 60 segundos
+
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function showNewTicketNotification(count) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification('NetAudit - Novos Chamados', {
+                    body: `Você tem ${count} novo(s) chamado(s) no GLPI`,
+                    icon: '/static/netaudit.ico',
+                    tag: 'new-tickets',
+                    requireInteraction: false
+                });
+                notification.onclick = () => { window.focus(); notification.close(); };
+                setTimeout(() => notification.close(), 5000);
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+
+            autoRefreshInterval = setInterval(() => {
+                if (!document.hidden) refreshTicketsAndNotify();
+            }, AUTO_REFRESH_INTERVAL);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+                } else {
+                    startAutoRefresh();
+                }
+            });
+        }
+
+        async function refreshTicketsAndNotify() {
+            const currentFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'not_solved';
+            try {
+                const res = await fetch(`/api/glpi/tickets?status=${currentFilter}&_nocache=${Date.now()}`);
+                const data = await res.json();
+                if (data.success && data.tickets) {
+                    const newTicketIds = new Set(data.tickets.map(t => t.id));
+                    if (lastTicketIds.size > 0) {
+                        const newTickets = data.tickets.filter(t => !lastTicketIds.has(t.id));
+                        if (newTickets.length > 0) {
+                            showNewTicketNotification(newTickets.length);
+                            const refreshBtn = document.getElementById('btn-refresh');
+                            if (refreshBtn && !refreshBtn.querySelector('.new-badge')) {
+                                const badge = document.createElement('span');
+                                badge.className = 'new-badge';
+                                badge.textContent = newTickets.length;
+                                badge.style.cssText = 'position:absolute;top:-5px;right:-5px;background:#ef4444;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;animation:pulse 1s infinite;';
+                                refreshBtn.style.position = 'relative';
+                                refreshBtn.appendChild(badge);
+                            }
+                        }
+                    }
+                    lastTicketIds = newTicketIds;
+                    ticketsCache = { data: data, filter: currentFilter, timestamp: Date.now(), CACHE_DURATION: 300000 };
+                    updateStats();
+                }
+            } catch (e) { console.log('[Auto-refresh] Erro:', e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConfig();
+            setupGlobalListeners();
+            requestNotificationPermission();
+            startAutoRefresh();
+        });
+
+        // --- CORE LOGIC SAME AS BEFORE ---
+        async function checkConfig() {
+            try {
+                const res = await fetch('/api/glpi/config');
+                const data = await res.json();
+                if (data.configured) {
+                    document.getElementById('setup-view').style.display = 'none';
+                    document.getElementById('tickets-view').style.display = 'block';
+                    if (data.username) {
+                        const userInfo = document.getElementById('glpi-user-info');
+                        document.getElementById('glpi-active-user').textContent = data.username;
+                        userInfo.style.display = 'flex';
+                    }
+                    loadTable(currentFilter);
+                } else {
+                    document.getElementById('setup-view').style.display = 'flex';
+                    document.getElementById('tickets-view').style.display = 'none';
+                }
+            } catch (e) { }
+        }
+
+        function setupGlobalListeners() {
+            // Filter Tabs
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    loadTable(currentFilter);
+                });
+            });
+
+            // Refresh
+            document.getElementById('btn-refresh').addEventListener('click', () => {
+                // Remove badge se existir
+                const badge = document.querySelector('.new-badge');
+                if (badge) badge.remove();
+                loadTable(currentFilter, true);
+            });
+
+            // New Ticket Modal
+            document.getElementById('btn-add-ticket').addEventListener('click', () => {
+                document.getElementById('modal-new-ticket').style.opacity = '1';
+                document.getElementById('modal-new-ticket').style.pointerEvents = 'auto'; // ensure clickable
+                loadFormData(); // Load categories
+            });
+
+            // Close Drawer
+            document.getElementById('close-drawer').addEventListener('click', closeDrawer);
+            document.getElementById('drawer-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'drawer-overlay') {
+                    closeDrawer();
+                    closeNewTicket();
+                }
+            });
+
+            // Connect GLPI
+            const connectBtn = document.querySelector('.js-connect-btn');
+            if (connectBtn) connectBtn.addEventListener('click', connectGLPI);
+
+            // SEARCH FUNCTIONALITY
+            const searchInput = document.getElementById('search-input');
+            const searchClear = document.getElementById('search-clear');
+            let searchTimeout;
+
+            searchInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+
+                // Toggle clear button
+                if (value.length > 0) {
+                    searchClear.style.display = 'flex';
+                } else {
+                    searchClear.style.display = 'none';
+                }
+
+                // Debounced search
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    filterTickets(value);
+                }, 300);
+            });
+
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                searchClear.style.display = 'none';
+                filterTickets('');
+            });
+
+            // SORT DROPDOWN
+            const sortBtn = document.getElementById('sort-btn');
+            const sortMenu = document.getElementById('sort-menu');
+            let currentSort = 'date-desc';
+
+            sortBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sortMenu.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                sortMenu.classList.remove('active');
+            });
+
+            // Sort options
+            document.querySelectorAll('.sort-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const sortType = option.dataset.sort;
+                    currentSort = sortType;
+
+                    // Update UI
+                    document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    document.getElementById('sort-label').textContent = option.querySelector('span').textContent;
+
+                    // Sort tickets
+                    sortTickets(sortType);
+                    sortMenu.classList.remove('active');
+                });
+            });
+
+            // Send Followup
+            document.getElementById('btn-send-followup').addEventListener('click', sendFollowup);
+        }
+
+        window.closeNewTicket = function () {
+            document.getElementById('modal-new-ticket').style.opacity = '0';
+            document.getElementById('modal-new-ticket').style.pointerEvents = 'none';
+        }
+
+        async function loadFormData() {
+            try {
+                const res = await fetch('/api/glpi/categories');
+                const cats = await res.json();
+                const select = document.getElementById('nt-category');
+                select.innerHTML = '<option value="">Selecione...</option>';
+                cats.forEach(c => {
+                    select.innerHTML += `<option value="${c.id}">${c.completename || c.name}</option>`;
+                });
+            } catch (e) { }
+        }
+
+        window.submitNewTicket = async function () {
+            const title = document.getElementById('nt-title').value.trim();
+            const content = document.getElementById('nt-content').value.trim();
+            const category = document.getElementById('nt-category').value;
+            const urgency = document.getElementById('nt-urgency').value;
+            const btn = document.getElementById('btn-create-submit');
+
+            if (!title || !content) return alert("Preencha todos os campos.");
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Criando...';
+
+            try {
+                const res = await fetch('/api/glpi/tickets/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        content,
+                        category,
+                        urgency,
+                        impact: 3 // Default
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeNewTicket();
+                    loadTable('not_solved', true);
+                    document.getElementById('nt-title').value = '';
+                    document.getElementById('nt-content').value = '';
+                } else {
+                    alert("Erro: " + (data.message || data.error));
+                }
+            } catch (e) { alert("Erro de rede."); }
+            finally {
+                btn.disabled = false;
+                btn.innerHTML = "Criar Chamado";
+            }
+        }
+
+        // --- CACHE SYSTEM FOR INSTANT LOADING ---
+        let ticketsCache = {
+            data: null,
+            filter: null,
+            timestamp: 0,
+            CACHE_DURATION: 300000 // 5 minutos (sincronizado com backend)
+        };
+
+        // --- RENDER TABLE REDESIGNED WITH CACHE ---
+        async function loadTable(filter, forceRefresh = false) {
+            const container = document.getElementById('tickets-list-container');
+            const loader = document.getElementById('loading-state');
+
+            // Check cache first for instant display
+            const now = Date.now();
+            const isCacheValid = ticketsCache.data &&
+                ticketsCache.filter === filter &&
+                (now - ticketsCache.timestamp) < ticketsCache.CACHE_DURATION;
+
+            if (isCacheValid && !forceRefresh) {
+                // INSTANT render from cache (sem loader!)
+                renderTickets(ticketsCache.data, container);
+                // Background refresh silencioso
+                fetchAndCacheTickets(filter, container, loader, true);
+                return;
+            }
+
+            // Show loader only if no cache
+            container.innerHTML = '';
+            loader.style.display = 'block';
+
+            await fetchAndCacheTickets(filter, container, loader, false);
+            updateStats();
+        }
+
+        async function updateStats() {
+            try {
+                const res = await fetch('/api/glpi/stats');
+                const data = await res.json();
+
+                animateValue("stat-new", data.new);
+                animateValue("stat-proc", data.processing + data.pending + data.planned);
+                animateValue("stat-solv", data.solved);
+                animateValue("stat-total", data.total);
+            } catch (e) { }
+        }
+
+        function animateValue(id, value) {
+            const el = document.getElementById(id);
+            const start = parseInt(el.textContent) || 0;
+            const duration = 800; // Reduzido de 1000ms para 800ms
+            let startTime = null;
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                el.textContent = Math.floor(progress * (value - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            }
+            window.requestAnimationFrame(step);
+        }
+
+        async function fetchAndCacheTickets(filter, container, loader, isBackground) {
+            try {
+                const res = await fetch(`/api/glpi/tickets?status=${filter}`);
+                const data = await res.json();
+
+                if (!isBackground) loader.style.display = 'none';
+
+                if (data.success && data.tickets) {
+                    // Update cache
+                    ticketsCache = {
+                        data: data,
+                        filter: filter,
+                        timestamp: Date.now(),
+                        CACHE_DURATION: 300000  // 5 minutos
+                    };
+
+                    renderTickets(data, container);
+                }
+            } catch (e) {
+                if (!isBackground) {
+                    loader.style.display = 'none';
+                    console.error(e);
+                    container.innerHTML = `<div style="text-align:center; padding:40px; color:#ef4444">Erro ao carregar dados.</div>`;
+                }
+            }
+        }
+
+        function renderTickets(data, container) {
+            if (data.tickets && data.tickets.length > 0) {
+                // Use DocumentFragment for faster DOM manipulation
+                const fragment = document.createDocumentFragment();
+
+                data.tickets.forEach((t, i) => {
+                    const card = document.createElement('div');
+                    card.className = 'ticket-card';
+                    card.style.animationDelay = (i * 0.01) + 's'; // Reduzido de 0.02s para 0.01s (2x mais rápido)
+                    card.dataset.ticketId = t.id; // Store ID for preloading
+
+                    // Data formatting
+                    const dateStr = t.date ? new Date(t.date).toLocaleDateString('pt-BR') : '-';
+                    const updateStr = t.date_mod ? new Date(t.date_mod).toLocaleDateString('pt-BR') : '-';
+                    const requester = getRequesterName(t);
+                    const statusBadge = getStatusBadge(t.status);
+
+                    const location = t.locations_name || t.locations_id || '-';
+                    const category = t.itilcategories_name || t.itilcategories_id || '-';
+
+                    card.innerHTML = `
+                        <div class="t-id">#${t.id}</div>
+                        <div class="t-title">${t.name}</div>
+                        <div class="t-requester"><i class="ph-bold ph-user"></i> ${requester}</div>
+                        <div class="t-location"><i class="ph-bold ph-map-pin"></i> ${location}</div>
+                        <div class="t-category"><i class="ph-bold ph-tag"></i> ${category}</div>
+                        <div>${statusBadge}</div>
+                        <div class="t-meta">
+                            <span><i class="ph-bold ph-calendar-plus"></i> ${dateStr}</span>
+                            <span><i class="ph-bold ph-clock"></i> ${updateStr}</span>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button class="btn-icon" onclick="openDrawer(${t.id})">
+                                <i class="ph-bold ph-caret-right"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    // PRELOAD on hover for instant opening (reduzido de 300ms para 150ms)
+                    let hoverTimeout;
+                    card.addEventListener('mouseenter', () => {
+                        hoverTimeout = setTimeout(() => {
+                            preloadTicketDetails(t.id);
+                        }, 150); // Mais responsivo
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        clearTimeout(hoverTimeout);
+                    });
+
+                    fragment.appendChild(card);
+                });
+
+                container.innerHTML = '';
+                // Use requestAnimationFrame for smoother rendering
+                requestAnimationFrame(() => {
+                    container.appendChild(fragment);
+                });
+            } else {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph-duotone ph-tray"></i>
+                        <h3>Nenhum chamado encontrado</h3>
+                        <p>Tudo parece estar em ordem por aqui.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // FILTER TICKETS BY SEARCH
+        function filterTickets(searchTerm) {
+            const cards = document.querySelectorAll('.ticket-card');
+            const term = searchTerm.toLowerCase().trim();
+
+            if (!term) {
+                // Show all cards
+                cards.forEach(card => card.style.display = 'grid');
+                return;
+            }
+
+            cards.forEach(card => {
+                const id = card.querySelector('.t-id').textContent.toLowerCase();
+                const title = card.querySelector('.t-title').textContent.toLowerCase();
+                const requester = card.querySelector('.t-requester').textContent.toLowerCase();
+
+                const matches = id.includes(term) || title.includes(term) || requester.includes(term);
+                card.style.display = matches ? 'grid' : 'none';
+            });
+        }
+
+        // SORT TICKETS
+        function sortTickets(sortType) {
+            const container = document.getElementById('tickets-list-container');
+            const cards = Array.from(document.querySelectorAll('.ticket-card'));
+
+            cards.sort((a, b) => {
+                switch (sortType) {
+                    case 'date-desc':
+                        // Newest first (default)
+                        const idA = parseInt(a.querySelector('.t-id').textContent.replace('#', ''));
+                        const idB = parseInt(b.querySelector('.t-id').textContent.replace('#', ''));
+                        return idB - idA;
+
+                    case 'date-asc':
+                        // Oldest first
+                        const idA2 = parseInt(a.querySelector('.t-id').textContent.replace('#', ''));
+                        const idB2 = parseInt(b.querySelector('.t-id').textContent.replace('#', ''));
+                        return idA2 - idB2;
+
+                    case 'priority-desc':
+                        // Highest priority first
+                        const prioA = getPriorityValue(a);
+                        const prioB = getPriorityValue(b);
+                        return prioB - prioA;
+
+                    case 'priority-asc':
+                        // Lowest priority first
+                        const prioA2 = getPriorityValue(a);
+                        const prioB2 = getPriorityValue(b);
+                        return prioA2 - prioB2;
+
+                    default:
+                        return 0;
+                }
+            });
+
+            // Re-append sorted cards
+            cards.forEach((card, i) => {
+                card.style.animationDelay = (i * 0.02) + 's';
+                container.appendChild(card);
+            });
+        }
+
+        // Helper to get priority value from card
+        function getPriorityValue(card) {
+            // Try to get from cached data first
+            const ticketId = card.dataset.ticketId;
+            if (ticketsCache.data && ticketsCache.data.tickets) {
+                const ticket = ticketsCache.data.tickets.find(t => t.id == ticketId);
+                if (ticket && ticket.priority) return ticket.priority;
+            }
+
+            // Fallback: parse from status badge text
+            const statusText = card.querySelector('.status-pill').textContent.toLowerCase();
+            if (statusText.includes('novo')) return 5;
+            if (statusText.includes('processando')) return 4;
+            if (statusText.includes('planejado')) return 3;
+            if (statusText.includes('pendente')) return 3;
+            if (statusText.includes('resolvido')) return 2;
+            return 1; // fechado
+        }
+
+        // LAZY LOAD requester names after initial render
+        async function lazyLoadRequesters(tickets) {
+            for (const ticket of tickets) {
+                if (!ticket.actors) {
+                    // Fetch actors in background
+                    try {
+                        const res = await fetch(`/api/glpi/ticket/${ticket.id}`);
+                        const data = await res.json();
+                        if (data.success && data.ticket.actors) {
+                            // Update the requester display
+                            const cards = document.querySelectorAll(`.ticket-card`);
+                            cards.forEach(card => {
+                                const idText = card.querySelector('.t-id').textContent;
+                                if (idText === `#${ticket.id}`) {
+                                    const requesterEl = card.querySelector('.t-requester');
+                                    const requester = getRequesterName(data.ticket);
+                                    if (requesterEl && requester !== '--') {
+                                        requesterEl.innerHTML = `<i class="ph-bold ph-user"></i> ${requester}`;
+                                    }
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        // Silently fail
+                    }
+                }
+            }
+        }
+
+        // PRELOAD ticket details silently in background
+        function preloadTicketDetails(id) {
+            const cached = detailCache.get(id);
+            const now = Date.now();
+
+            // Only preload if not in cache or cache is old
+            if (!cached || (now - cached.timestamp) > 300000) {
+                fetchTicketDetails(id, true); // Silent background fetch
+            }
+        }
+
+        // --- DRAWER DETAILS WITH CACHE ---
+        window.openDrawer = async function (id) {
+            const drawer = document.getElementById('supreme-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            drawer.classList.add('active');
+            overlay.classList.add('active');
+
+            // Reset UI
+            document.getElementById('d-title-text').textContent = 'Carregando...';
+            document.getElementById('d-id-tag').textContent = '#' + id;
+
+            // Check cache first
+            const cached = detailCache.get(id);
+            const now = Date.now();
+
+            if (cached && (now - cached.timestamp) < 300000) { // 5 min cache
+                // INSTANT render from cache
+                renderDetails(cached.data);
+                document.getElementById('d-shimmer').style.display = 'none';
+                document.getElementById('d-content-real').style.display = 'block';
+
+                // Background refresh
+                fetchTicketDetails(id, true);
+            } else {
+                // Show shimmer
+                document.getElementById('d-shimmer').style.display = 'block';
+                document.getElementById('d-content-real').style.display = 'none';
+                await fetchTicketDetails(id, false);
+            }
+        }
+
+        async function fetchTicketDetails(id, isBackground) {
+            try {
+                const res = await fetch(`/api/glpi/ticket/${id}`);
+                const data = await res.json();
+                if (data.success) {
+                    // Update cache
+                    detailCache.set(id, {
+                        data: data.ticket,
+                        timestamp: Date.now()
+                    });
+
+                    renderDetails(data.ticket);
+                    if (!isBackground) {
+                        document.getElementById('d-shimmer').style.display = 'none';
+                        document.getElementById('d-content-real').style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                if (!isBackground) console.error(e);
+            }
+        }
+
+        function renderDetails(t) {
+            document.getElementById('d-title-text').textContent = t.name;
+            document.getElementById('d-status-pill').innerHTML = getStatusBadge(t.status);
+
+            // Actors
+            const requester = getRequesterName(t);
+            const assignee = getAssigneeName(t);
+
+            // New Metadata Structure
+            const metaGrid = document.getElementById('d-meta-grid');
+            metaGrid.innerHTML = `
+                <div class="meta-card mc-date">
+                    <i class="ph-bold ph-calendar-blank meta-icon-bg"></i>
+                    <div class="meta-label"><i class="ph-bold ph-calendar"></i> Abertura</div>
+                    <div class="meta-value">${t.date ? new Date(t.date).toLocaleString('pt-BR') : '-'}</div>
+                </div>
+                
+                <div class="meta-card mc-prio">
+                    <i class="ph-bold ph-warning-circle meta-icon-bg"></i>
+                    <div class="meta-label"><i class="ph-bold ph-warning"></i> Prioridade</div>
+                    <div class="meta-value">${getPriorityText(t.priority)}</div>
+                </div>
+                
+                <div class="meta-card mc-cat">
+                    <i class="ph-bold ph-tag meta-icon-bg"></i>
+                    <div class="meta-label"><i class="ph-bold ph-tag"></i> Categoria</div>
+                    <div class="meta-value">${typeof t.itilcategories_id === 'object' ? t.itilcategories_id.name : (t.itilcategories_id || '-')}</div>
+                </div>
+                
+                <div class="meta-card mc-user">
+                    <i class="ph-bold ph-user-circle meta-icon-bg"></i>
+                    <div class="meta-label"><i class="ph-bold ph-user"></i> Solicitante</div>
+                    <div class="meta-value">${requester}</div>
+                </div>
+            `;
+
+            document.getElementById('d-assignee').textContent = assignee;
+
+            // Content - Decode HTML Entities to render properly
+            const cleanContent = decodeEntities(t.content);
+            document.getElementById('d-desc-html').innerHTML = cleanContent || 'Sem descrição.';
+
+            // Timeline rendering
+            const tlWrap = document.getElementById('d-timeline-wrap');
+            tlWrap.innerHTML = '';
+
+            const events = [
+                ...(t.followups || []).map(x => ({ ...x, type: 'followup', icon: 'ph-chat-circle-text', color: '#6366f1' })),
+                ...(t.tasks || []).map(x => ({ ...x, type: 'task', icon: 'ph-check-square', color: '#f59e0b' })),
+                ...(t.solutions || []).map(x => ({ ...x, type: 'solution', icon: 'ph-check-circle', color: '#10b981' }))
+            ].sort((a, b) => new Date(b.date_creation || b.date) - new Date(a.date_creation || a.date));
+
+            if (events.length === 0) {
+                tlWrap.innerHTML = '<div style="padding:20px; color:#94a3b8; font-style:italic;">Nenhum evento na linha do tempo.</div>';
+            }
+
+            events.forEach(ev => {
+                const date = new Date(ev.date_creation || ev.date).toLocaleString('pt-BR');
+                const author = ev.users_id || 'Sistema'; // Simplify for demo
+                const cleanEvContent = decodeEntities(ev.content);
+
+                const item = document.createElement('div');
+                item.style.marginBottom = '24px';
+                item.style.position = 'relative';
+
+                item.innerHTML = `
+                    <div style="position: absolute; left: -29px; top: 0; width: 16px; height: 16px; background: var(--bg-panel); border: 4px solid ${ev.color}; border-radius: 50%;"></div>
+                    <div style="background: var(--bg-panel); padding: 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                            <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: ${ev.color}; text-transform: uppercase;">
+                                <i class="ph-bold ${ev.icon}"></i> ${ev.type}
+                            </div>
+                            <div>${date}</div>
+                        </div>
+                        <div style="line-height: 1.5; color: var(--text-main); font-size: 0.95rem;">${cleanEvContent}</div>
+                    </div>
+                `;
+                tlWrap.appendChild(item);
+            });
+        }
+
+        let responseMode = 'followup';
+
+        window.setResponseMode = function (mode) {
+            responseMode = mode;
+            document.querySelectorAll('.response-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode-' + mode).classList.add('active');
+
+            const btn = document.getElementById('btn-send-followup');
+            const input = document.getElementById('followup-text');
+
+            if (mode === 'solution') {
+                input.placeholder = "Descreva a solução aplicada...";
+                btn.classList.remove('primary');
+                btn.style.background = '#10b981'; // Green
+                btn.innerHTML = '<i class="ph-bold ph-check"></i>';
+            } else {
+                input.placeholder = "Escrever resposta...";
+                btn.style.background = ''; // Revert to CSS default
+                btn.classList.add('primary');
+                btn.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i>';
+            }
+        }
+
+        async function sendFollowup() {
+            const id = document.getElementById('d-id-tag').textContent.replace('#', '');
+            const input = document.getElementById('followup-text');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const endpoint = responseMode === 'solution'
+                ? `/api/glpi/ticket/${id}/solution`
+                : `/api/glpi/ticket/${id}/followup`;
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: val })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    input.value = '';
+                    // If solved, maybe refresh or close? For now just reload details
+                    // Also reset mode to followup for safety
+                    setResponseMode('followup');
+                    openDrawer(id);
+                } else {
+                    alert('Erro: ' + (data.message || data.error));
+                }
+            } catch (e) { alert('Erro ao enviar'); }
+        }
+
+        // --- HELPERS ---
+        function decodeEntities(s) {
+            if (!s) return '';
+            const txt = document.createElement("textarea");
+            txt.innerHTML = s;
+            return txt.value;
+        }
+
+        function getRequesterName(t) {
+            // Try different fields where requester might be stored
+            if (t.actors && t.actors.length > 0) {
+                const r = t.actors.find(a => a.type == 1);
+                if (r) return r.name || r.users_id || 'Externo';
+            }
+
+            // Check for expanded dropdown fields (from list endpoint)
+            if (t._users_id_requester) return t._users_id_requester;
+            if (t.users_id_requester) return t.users_id_requester;
+
+            // Check for requester name field
+            if (t.requester_name) return t.requester_name;
+
+            // Fallback to user ID if available
+            if (t.users_id_requester_id) return `User #${t.users_id_requester_id}`;
+
+            return '--';
+        }
+        function getAssigneeName(t) {
+            if (!t.actors) return '--';
+            const r = t.actors.find(a => a.type == 2);
+            return r ? (r.name || r.users_id || 'N/A') : '--';
+        }
+        function getStatusBadge(s) {
+            const map = {
+                1: ['Novo', 's-new'], 2: ['Processando', 's-proc'],
+                3: ['Planejado', 's-proc'], 4: ['Pendente', 's-proc'],
+                5: ['Resolvido', 's-solv'], 6: ['Fechado', 's-clos']
+            };
+            const [l, c] = map[s] || ['-', 's-clos'];
+            return `<span class="status-pill ${c}">${l}</span>`;
+        }
+        function getPriorityHTML(p) {
+            let c = '#10b981', l = 'Baixa';
+            if (p == 3) { c = '#f59e0b'; l = 'Média'; }
+            if (p >= 4) { c = '#ef4444'; l = 'Alta'; }
+            return `<div style="display:flex;align-items:center;gap:6px;font-weight:600;"><div style="width:8px;height:8px;border-radius:50%;background:${c}"></div> ${l}</div>`;
+        }
+
+        function getPriorityText(p) {
+            const map = { 1: 'Baixa', 2: 'Média', 3: 'Média', 4: 'Alta', 5: 'Alta', 6: 'Alta' };
+            return map[p] || 'Média';
+        }
+
+        // Setup Connect GLPI function
+        window.connectGLPI = async function () {
+            // Reusing the same request logic as before
+            const payload = {
+                url: document.getElementById('glpi-url').value,
+                app_token: document.getElementById('glpi-app-token').value,
+                login: document.getElementById('glpi-user').value,
+                password: document.getElementById('glpi-pass').value
+            };
+            try {
+                await fetch('/api/glpi/config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                location.reload();
+            } catch (e) { alert("Erro de conexão"); }
+        }
+
+        window.closeDrawer = function () {
+            document.getElementById('supreme-drawer').classList.remove('active');
+            document.getElementById('drawer-overlay').classList.remove('active');
+        }
+
+    })();
+</script>
+{% endblock %}

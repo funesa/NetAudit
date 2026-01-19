@@ -1,0 +1,725 @@
+{% extends "layout.html" %}
+{% block title %}Usuários do Sistema{% endblock %}
+{% block page_title %}Gerenciamento de Usuários{% endblock %}
+
+{% block content %}
+<style>
+    /* GRID LAYOUT FOR CARDS (Small card style requested) */
+    #usersList {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 20px;
+        padding-top: 20px;
+    }
+
+    /* CARD DESIGN */
+    .user-card {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 30px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .user-card:hover {
+        transform: translateY(-5px);
+        background: rgba(30, 41, 59, 0.6);
+        border-color: rgba(99, 102, 241, 0.3);
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Decorative Top Gradient */
+    .user-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+        pointer-events: none;
+    }
+
+    /* Avatar */
+    .user-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+        color: #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 16px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .user-card:hover .user-avatar {
+        transform: scale(1.05);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #fff;
+    }
+
+    /* Text Info */
+    .user-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #f8fafc;
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+    }
+
+    .user-role-badge {
+        font-size: 0.75rem;
+        padding: 6px 14px;
+        border-radius: 99px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-block;
+    }
+
+    .role-admin {
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+    }
+
+    .role-user {
+        background: rgba(20, 184, 166, 0.15);
+        color: #2dd4bf;
+        border: 1px solid rgba(20, 184, 166, 0.25);
+    }
+
+    /* Action Buttons (Top Right) */
+    .card-actions {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        gap: 6px;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+
+    .user-card:hover .card-actions {
+        opacity: 1;
+    }
+
+    .action-icon-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .action-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    .action-icon-btn.delete:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+
+    /* FORCED PREMIUM GLASS STYLES (MATCH LAYOUT.HTML EXACTLY) */
+    .premium-glass-card-force {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.25);
+        border-left: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-radius: 24px;
+        padding: 32px;
+        transform: scale(0.95);
+        transition: all 0.3s ease;
+        width: 420px;
+        max-width: 90%;
+        margin: auto;
+    }
+
+    .input-wrapper-glass-force {
+        position: relative;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        padding: 2px 14px;
+        transition: all 0.2s ease;
+        margin-bottom: 20px;
+    }
+
+    .input-wrapper-glass-force:focus-within {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    }
+
+    .input-wrapper-glass-force i {
+        color: #94a3b8;
+        font-size: 1.2rem;
+        margin-right: 12px;
+        pointer-events: none;
+        /* Icon shouldn't block clicks */
+    }
+
+    .input-wrapper-glass-force input,
+    .input-wrapper-glass-force select {
+        background: transparent !important;
+        border: none !important;
+        color: #fff !important;
+        width: 100%;
+        padding: 12px 0 !important;
+        font-size: 0.95rem;
+        font-weight: 500;
+        outline: none !important;
+        box-shadow: none !important;
+
+        /* Remove default select styling */
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+
+    /* Hide default arrow in IE */
+    .input-wrapper-glass-force select::-ms-expand {
+        display: none;
+    }
+
+    .input-wrapper-glass-force select option {
+        background: #1e293b;
+        color: white;
+        padding: 12px;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        z-index: 10001;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.open {
+        display: flex;
+        opacity: 1;
+    }
+
+    .modal-overlay.open .premium-glass-card-force {
+        transform: scale(1);
+    }
+
+    /* CUSTOM TOGGLE DESIGN */
+    .permission-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .perm-toggle-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+
+    .perm-toggle-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .perm-toggle-card.active {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.05);
+    }
+
+    .perm-toggle-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.2);
+        color: #94a3b8;
+        font-size: 1.2rem;
+        transition: all 0.2s;
+    }
+
+    .perm-toggle-card.active .perm-toggle-icon {
+        background: #6366f1;
+        color: #fff;
+    }
+
+    .perm-toggle-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .perm-toggle-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+
+    .perm-toggle-sub {
+        font-size: 0.7rem;
+        color: #94a3b8;
+    }
+
+    .status-pill-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .module-selector {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 4px;
+        display: flex;
+    }
+
+    .module-option {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #94a3b8;
+        cursor: pointer;
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+
+    .module-option.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<div class="control-container"
+    style="background: transparent; border: none; box-shadow: none; padding: 0; margin-bottom: 24px;">
+    {% if session['role'] == 'admin' %}
+    <div class="control-bar" style="justify-content: flex-end;">
+        <button class="btn-primary" onclick="openModal()"
+            style="border-radius: 99px; padding-left: 20px; padding-right: 20px;">
+            <i class="ph-bold ph-plus"></i> Novo Usuário
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<div id="usersList">
+    <!-- Populated by JS -->
+    <div style="text-align: center; padding: 40px; color: var(--text-secondary); grid-column: 1 / -1;">
+        <i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i>
+        <p>Carregando usuários...</p>
+    </div>
+</div>
+
+<!-- Add/Edit Modal (Premium Glass Style) -->
+<div class="modal-overlay" id="userModal">
+    <div class="premium-glass-card-force">
+        <div style="text-align: center; margin-bottom: 28px;">
+            <div
+                style="width: 70px; height: 70px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2)); color: #818cf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);">
+                <i class="ph-bold ph-user-plus" style="font-size: 2.2rem;" id="modalIcon"></i>
+            </div>
+            <h3 style="font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 6px; letter-spacing: -0.02em;"
+                id="modalTitle">
+                Novo Usuário</h3>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin: 0;">Gestão de acesso local</p>
+        </div>
+
+        <input type="hidden" id="editMode" value="false">
+
+        <div>
+            <label
+                style="display: block; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Nome
+                de Usuário</label>
+            <div class="input-wrapper-glass-force">
+                <i class="ph-bold ph-user"></i>
+                <input type="text" id="username" placeholder="ex: admin2">
+            </div>
+        </div>
+
+        <div>
+            <label
+                style="display: block; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Senha</label>
+            <div class="input-wrapper-glass-force" style="margin-bottom: 8px;">
+                <i class="ph-bold ph-lock-key"></i>
+                <input type="password" id="password" placeholder="******">
+            </div>
+            <small style="color: #64748b; margin-bottom: 20px; display: none; font-size: 0.75rem; text-align: right;"
+                id="pwHint">Deixe em branco para manter a atual</small>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <label
+                style="display: block; font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Função
+                de Sistema</label>
+            <div class="module-selector" id="roleSelector">
+                <div class="module-option active" onclick="setSelectValue('role', 'user')" id="optRoleUser">Operador
+                </div>
+                <div class="module-option" onclick="setSelectValue('role', 'admin')" id="optRoleAdmin">Administrador
+                </div>
+            </div>
+            <select id="role" style="display: none;">
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+            </select>
+        </div>
+
+        <div class="status-pill-grid">
+            <div>
+                <label
+                    style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase;">Status</label>
+                <div class="module-selector">
+                    <div class="module-option active" onclick="setSelectValue('isActive', 'true')" id="optStatusTrue">
+                        Ativo</div>
+                    <div class="module-option" onclick="setSelectValue('isActive', 'false')" id="optStatusFalse">OFF
+                    </div>
+                </div>
+                <select id="isActive" style="display: none;">
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            </div>
+            <div>
+                <label
+                    style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase;">Ação</label>
+                <div class="module-selector">
+                    <div class="module-option active" onclick="setSelectValue('permType', 'view')" id="optPermView">Ler
+                    </div>
+                    <div class="module-option" onclick="setSelectValue('permType', 'exec')" id="optPermExec">Exec</div>
+                </div>
+                <select id="permType" style="display: none;">
+                    <option value="view">view</option>
+                    <option value="exec">exec</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="permission-group">
+            <div class="perm-toggle-card active" id="cardAD" onclick="togglePermCard('accessAD')">
+                <div class="perm-toggle-icon"><i class="ph ph-windows-logo"></i></div>
+                <div class="perm-toggle-info">
+                    <span class="perm-toggle-label">AD</span>
+                    <span class="perm-toggle-sub">Directory</span>
+                </div>
+                <input type="checkbox" id="accessAD" checked style="display: none;">
+            </div>
+
+            <div class="perm-toggle-card active" id="cardHelp" onclick="togglePermCard('accessHelpdesk')">
+                <div class="perm-toggle-icon"><i class="ph ph-headset"></i></div>
+                <div class="perm-toggle-info">
+                    <span class="perm-toggle-label">Helpdesk</span>
+                    <span class="perm-toggle-sub">Tickets</span>
+                </div>
+                <input type="checkbox" id="accessHelpdesk" checked style="display: none;">
+            </div>
+        </div>
+
+        <div id="credentialsSection"
+            style="margin-top: 24px; padding: 18px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05)); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 16px; display: none;">
+            <h4
+                style="margin: 0 0 8px; font-size: 0.85rem; color: #a5b4fc; display: flex; align-items: center; gap: 8px; font-weight: 700;">
+                <i class="ph-bold ph-key"></i> Vínculos Ativos
+            </h4>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0; line-height: 1.5;">O usuário logado pode gerenciar
+                suas próprias conexões AD/GLPI pelo menu de perfil.</p>
+        </div>
+
+        <div class="modal-footer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 32px;">
+            <button onclick="closeModal()"
+                style="width: 100%; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                Cancelar
+            </button>
+            <button onclick="saveUser()"
+                style="width: 100%; border-radius: 12px; padding: 12px; background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: #fff; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transition: all 0.2s;">
+                Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUserList = [];
+    const currentUserRole = "{{ session.get('role', 'user') }}";
+
+
+    document.addEventListener('DOMContentLoaded', loadUsers);
+
+    async function loadUsers() {
+        try {
+            const res = await fetch('/api/system/users');
+            const data = await res.json();
+            currentUserList = data;
+            renderUsers(data);
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao carregar usuários');
+        }
+    }
+
+    function renderUsers(users) {
+        const container = document.getElementById('usersList');
+        if (users.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary); grid-column: 1 / -1;">Nenhum usuário encontrado.</div>';
+            return;
+        }
+
+        container.innerHTML = users.map(u => `
+            <div class="user-card" style="${!u.is_active ? 'opacity: 0.6; filter: grayscale(0.5);' : ''}">
+                ${currentUserRole === 'admin' ? `
+                <div class="card-actions">
+                    <button class="action-icon-btn" onclick="editUser('${u.username}', '${u.role}', ${u.is_active}, '${u.permissions.type}', ${u.permissions.ad}, ${u.permissions.helpdesk}, ${u.is_master})" title="Editar">
+                        <i class="ph-bold ph-pencil-simple"></i>
+                    </button>
+                    ${(u.username !== '{{ session.username }}' && !u.is_master) ? `
+                    <button class="action-icon-btn delete" onclick="deleteUser('${u.username}')" title="Excluir">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>` : ''}
+                </div>` : ''}
+
+                <div class="user-avatar" style="${u.is_master ? 'background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2)); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);' : ''}">
+                   ${u.is_master ? '<i class="ph-fill ph-crown-simple"></i>' : (u.role === 'admin' ? '<i class="ph-fill ph-crown"></i>' : '<i class="ph-fill ph-user"></i>')}
+                </div>
+                
+                <div class="user-name">${u.username} ${u.is_master ? '<span style="color: #f59e0b; font-size: 0.7rem; display: block; margin-top: -4px;">MASTER</span>' : ''}</div>
+                
+                <div style="margin-bottom: 12px;">
+                    <div class="user-role-badge ${u.role === 'admin' ? 'role-admin' : 'role-user'}">
+                        ${u.role === 'admin' ? 'Administrador' : 'Operador'}
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                    <span style="font-size: 0.65rem; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px; color: #94a3b8;">
+                        ${u.permissions.type === 'exec' ? 'Execução' : 'Visualização'}
+                    </span>
+                    ${u.permissions.ad ? '<span style="font-size: 0.65rem; background: rgba(99,102,241,0.1); padding: 2px 8px; border-radius: 4px; color: #818cf8;">AD</span>' : ''}
+                    ${u.permissions.helpdesk ? '<span style="font-size: 0.65rem; background: rgba(20,184,166,0.1); padding: 2px 8px; border-radius: 4px; color: #2dd4bf;">Helpdesk</span>' : ''}
+                </div>
+
+                ${!u.is_active ? '<div style="margin-top: 10px; color: #ef4444; font-size: 0.75rem; font-weight: 700;">CONTA DESATIVADA</div>' : ''}
+            </div>
+        `).join('');
+    }
+
+    function openModal() {
+        document.getElementById('modalTitle').textContent = 'Novo Usuário';
+        document.getElementById('modalIcon').className = 'ph-bold ph-user-plus';
+        document.getElementById('editMode').value = 'false';
+
+        const userInput = document.getElementById('username');
+        userInput.value = '';
+        userInput.disabled = false;
+        userInput.parentElement.style.opacity = '1';
+
+        document.getElementById('password').value = '';
+        document.getElementById('pwHint').style.display = 'none';
+
+        // Reset Visual Selects
+        setSelectValue('role', 'user');
+        setSelectValue('isActive', 'true');
+        setSelectValue('permType', 'view');
+
+        // Reset Toggles
+        document.getElementById('accessAD').checked = true;
+        document.getElementById('accessHelpdesk').checked = true;
+        updateToggleCards();
+
+        document.getElementById('userModal').classList.add('open');
+        document.getElementById('credentialsSection').style.display = 'none';
+
+        document.getElementById('roleSelector').style.opacity = '1';
+        document.getElementById('roleSelector').style.pointerEvents = 'all';
+    }
+
+    function editUser(username, role, isActive, permType, hasAD, hasHelpdesk, isMaster) {
+        document.getElementById('modalTitle').textContent = isMaster ? 'Configurar Master' : 'Editar Usuário';
+        document.getElementById('modalIcon').className = isMaster ? 'ph-bold ph-crown-simple' : 'ph-bold ph-pencil-simple';
+        document.getElementById('editMode').value = 'true';
+
+        const userInput = document.getElementById('username');
+        userInput.value = username;
+        userInput.disabled = true;
+        userInput.parentElement.style.opacity = '0.7';
+
+        document.getElementById('password').value = '';
+        document.getElementById('pwHint').style.display = 'block';
+
+        if (isMaster) {
+            document.getElementById('password').disabled = true;
+            document.getElementById('password').placeholder = "Protegido (Senha Master)";
+            document.getElementById('pwHint').textContent = "A senha master não pode ser alterada por este painel.";
+            document.getElementById('roleSelector').style.opacity = '0.5';
+            document.getElementById('roleSelector').style.pointerEvents = 'none';
+        } else {
+            document.getElementById('password').disabled = false;
+            document.getElementById('password').placeholder = "******";
+            document.getElementById('pwHint').textContent = "Deixe em branco para manter a atual";
+            document.getElementById('roleSelector').style.opacity = '1';
+            document.getElementById('roleSelector').style.pointerEvents = 'all';
+        }
+
+        setSelectValue('role', role);
+        setSelectValue('isActive', isActive ? 'true' : 'false');
+        setSelectValue('permType', permType || 'view');
+
+        document.getElementById('accessAD').checked = hasAD;
+        document.getElementById('accessHelpdesk').checked = hasHelpdesk;
+        updateToggleCards();
+
+        document.getElementById('userModal').classList.add('open');
+        document.getElementById('credentialsSection').style.display = 'block';
+    }
+
+    // HELPER FUNCTIONS FOR NEW UI
+    function setSelectValue(id, val) {
+        document.getElementById(id).value = val;
+
+        // Update Visuals
+        if (id === 'role') {
+            document.getElementById('optRoleUser').classList.toggle('active', val === 'user');
+            document.getElementById('optRoleAdmin').classList.toggle('active', val === 'admin');
+        } else if (id === 'isActive') {
+            document.getElementById('optStatusTrue').classList.toggle('active', val === 'true');
+            document.getElementById('optStatusFalse').classList.toggle('active', val === 'false');
+        } else if (id === 'permType') {
+            document.getElementById('optPermView').classList.toggle('active', val === 'view');
+            document.getElementById('optPermExec').classList.toggle('active', val === 'exec');
+        }
+    }
+
+    function togglePermCard(id) {
+        const cb = document.getElementById(id);
+        cb.checked = !cb.checked;
+        updateToggleCards();
+    }
+
+    function updateToggleCards() {
+        const adActive = document.getElementById('accessAD').checked;
+        const helpActive = document.getElementById('accessHelpdesk').checked;
+
+        document.getElementById('cardAD').classList.toggle('active', adActive);
+        document.getElementById('cardHelp').classList.toggle('active', helpActive);
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').classList.remove('open');
+    }
+
+    async function saveUser() {
+        const editMode = document.getElementById('editMode').value === 'true';
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const role = document.getElementById('role').value;
+        const isActive = document.getElementById('isActive').value === 'true';
+        const permType = document.getElementById('permType').value;
+        const accessAD = document.getElementById('accessAD').checked;
+        const accessHelpdesk = document.getElementById('accessHelpdesk').checked;
+
+        if (!username) return alert('Nome de usuário obrigatório');
+        if (!editMode && !password) return alert('Senha obrigatória para novos usuários');
+
+        const payload = {
+            username,
+            password,
+            role,
+            is_active: isActive,
+            permissions: {
+                type: permType,
+                ad: accessAD,
+                helpdesk: accessHelpdesk
+            }
+        };
+        const method = editMode ? 'PUT' : 'POST';
+        const url = editMode ? `/api/system/users/${username}` : '/api/system/users';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+
+            if (result.success) {
+                closeModal();
+                loadUsers();
+            } else {
+                alert(result.message || 'Erro ao salvar');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão');
+        }
+    }
+
+    async function deleteUser(username) {
+        if (!confirm(`Tem certeza que deseja excluir o usuário "${username}"?`)) return;
+
+        try {
+            const res = await fetch(`/api/system/users/${username}`, { method: 'DELETE' });
+            const result = await res.json();
+
+            if (result.success) {
+                loadUsers();
+            } else {
+                alert(result.message || 'Erro ao excluir');
+            }
+        } catch (e) {
+            alert('Erro de conexão');
+        }
+    }
+
+    document.getElementById('userModal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+{% endblock %}

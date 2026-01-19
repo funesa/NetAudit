@@ -1,0 +1,327 @@
+{% extends "layout.html" %}
+{% block title %}Armazenamento dos Servidores{% endblock %}
+{% block page_title %}Armazenamento e Discos (C: D: ...){% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='list-layout.css') }}">
+
+<div class="list-view-container">
+    <!-- Header with Controls -->
+    <div class="filters-container">
+        <div class="control-bar-users">
+            <div class="input-group-users">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="searchShare" class="user-search-input" placeholder="Buscar servidor..."
+                    autocomplete="off" onkeyup="filterDisks()">
+            </div>
+
+            <button class="btn-refresh-pill" onclick="loadDisks()">
+                <i class="ph-bold ph-arrows-clockwise"></i> Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- List Header (Desktop Only) -->
+    <div class="list-header grid-shares">
+        <div class="list-header-item">Servidor / OS</div>
+        <div class="list-header-item" style="display: flex; gap: 34px;">
+            <span>Disco</span>
+            <span>Rótulo</span>
+        </div>
+        <div class="list-header-item">Uso do Disco</div>
+        <div class="list-header-item">Detalhes (Livre/Total)</div>
+        <div class="list-header-item" style="text-align: right; justify-content: flex-end;">Status</div>
+    </div>
+
+    <!-- Data Container -->
+    <div id="disksList" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="text-align:center; padding: 60px;">
+            <span style="color: var(--text-secondary);">Clique em Atualizar para carregar...</span>
+        </div>
+    </div>
+
+    <div id="statsFooter"
+        style="margin-top: 16px; color: var(--text-secondary); font-size: 0.9rem; padding: 0 12px 24px 12px;"></div>
+</div>
+
+<!-- Modal de Detalhes do Disco -->
+<div class="modal-overlay" id="diskDetailModal">
+    <div class="modal-premium" style="width: 800px; max-width: 95vw;">
+        <!-- Hero Header -->
+        <div class="modal-hero">
+            <div class="hero-icon-wrapper">
+                <i class="ph-fill ph-hard-drives" style="color: var(--primary);"></i>
+            </div>
+            <div class="hero-content">
+                <h2 id="modalServerName">--</h2>
+                <div class="hero-subtitle" id="modalDiskLabel">
+                    <!-- Disk Label will go here -->
+                </div>
+            </div>
+            <div class="hero-actions">
+                <button class="btn-icon-close" onclick="closeDiskModal()">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body-premium">
+            <!-- Informações do Servidor -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-hard-drives"></i> Informações do Servidor
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-desktop"></i> Nome do Servidor</span>
+                        <span class="data-value" id="modalServer">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-windows-logo"></i> Sistema Operacional</span>
+                        <span class="data-value" id="modalOS">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-activity"></i> Status</span>
+                        <span class="data-value" id="modalStatus">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações do Disco -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-database"></i> Detalhes do Disco
+                </div>
+                <div class="data-grid-premium">
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-circle"></i> Letra do Disco</span>
+                        <span class="data-value" id="modalDrive"
+                            style="font-family: monospace; font-weight: 700;">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-tag"></i> Rótulo</span>
+                        <span class="data-value" id="modalLabel">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-database"></i> Capacidade Total</span>
+                        <span class="data-value" id="modalTotal" style="font-weight: 700;">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-check-circle"></i> Espaço Livre</span>
+                        <span class="data-value" id="modalFree" style="color: #3fb950; font-weight: 700;">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-warning"></i> Espaço Usado</span>
+                        <span class="data-value" id="modalUsed" style="color: #f85149; font-weight: 700;">-</span>
+                    </div>
+                    <div class="data-item-premium">
+                        <span class="data-label"><i class="ph ph-percent"></i> Percentual de Uso</span>
+                        <span class="data-value" id="modalPct" style="font-weight: 700;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualização do Uso -->
+            <div class="info-section">
+                <div class="info-section-header">
+                    <i class="ph-bold ph-chart-bar"></i> Visualização do Uso
+                </div>
+                <div style="padding: 20px;">
+                    <div class="progress-wrapper"
+                        style="height: 40px; border-radius: 8px; background: var(--bg-hover);">
+                        <div id="modalProgressBar" class="progress-bar"
+                            style="width: 0%; display: flex; align-items: center; justify-content: center; color: var(--text-main); font-weight: 700; font-size: 0.9rem;">
+                            0%
+                        </div>
+                    </div>
+                    <div
+                        style="margin-top: 12px; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
+                        <span><i class="ph ph-check-circle"></i> Livre: <strong id="modalFreeSummary">-</strong></span>
+                        <span><i class="ph ph-warning"></i> Usado: <strong id="modalUsedSummary">-</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='premium-modal.css') }}">
+
+<style>
+    /* Responsive overrides only */
+    @media (max-width: 768px) {
+        .control-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .search-wrapper {
+            max-width: 100% !important;
+        }
+
+        .btn-primary {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<script>
+    let allDisks = [];
+    let selectedDiskIndex = -1;
+
+    async function loadDisks() {
+        const container = document.getElementById('disksList');
+        container.innerHTML = `
+        <div style="text-align:center; padding: 60px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <i class="ph-bold ph-spinner-gap anim-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 12px;"></i>
+                <span>Consultando espaço em disco nos servidores...</span>
+            </div>
+        </div>
+    `;
+
+        try {
+            const res = await fetch('/api/ad/shares');
+            allDisks = await res.json();
+            renderDisks(allDisks);
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Erro ao carregar discos. Verifique o console.</div>`;
+        }
+    }
+
+    function renderDisks(list) {
+        const container = document.getElementById('disksList');
+        container.innerHTML = '';
+
+        if (list.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 40px; color: #64748b;">Nenhum disco encontrado.</div>`;
+            return;
+        }
+
+        list.forEach((d, index) => {
+            const isOnline = d.Status === 'Online';
+            const badgeClass = isOnline ? 'status-online' : 'status-offline';
+
+            let barClass = 'bg-safe';
+            if (d.PctUsed > 75) barClass = 'bg-warn';
+            if (d.PctUsed > 90) barClass = 'bg-crit';
+
+            const card = document.createElement('div');
+            card.className = 'list-card grid-shares';
+            card.innerHTML = `
+            <!-- Server -->
+            <div class="l-server">
+                <div class="server-name">
+                    <i class="ph-fill ph-hard-drives" style="margin-right:6px; color:var(--text-secondary);"></i>
+                    ${d.Server}
+                </div>
+                <small>${d.OS}</small>
+            </div>
+
+            <!-- Drive & Label Wrapper -->
+            <div class="l-drive-group">
+                <div class="l-disk" title="Drive Letter">${d.Drive || '-'}</div>
+                <div class="l-label" title="${d.Label}">${d.Label || '-'}</div>
+            </div>
+
+            <!-- Usage -->
+            <div class="l-usage">
+                ${isOnline ? `
+                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; font-weight: 700; color: var(--text-secondary);">
+                    <span>${d.PctUsed}%</span>
+                 </div>
+                 <div class="progress-wrapper" style="height: 10px;">
+                     <div class="progress-bar ${barClass}" style="width: ${d.PctUsed}%"></div>
+                 </div>
+                ` : '<span style="color:var(--text-muted);">-</span>'}
+            </div>
+
+            <!-- Details -->
+            <div class="l-details">
+                ${isOnline ? `
+                  <div class="l-info-grid">
+                      <div class="l-info-item">
+                          <span class="l-info-label">Livre</span>
+                          <span style="color: #3fb950; font-weight: 700;">${d.FreeGB} GB</span>
+                      </div>
+                      <div class="l-info-item">
+                          <span class="l-info-label">Total</span>
+                          <span>${d.TotalGB} GB</span>
+                      </div>
+                  </div>
+                ` : `<span style="color:red; font-size:0.8rem;">${d.Error || 'Off'}</span>`}
+            </div>
+
+            <!-- Status -->
+            <div class="l-status">
+                <span class="status-badge ${badgeClass}">${d.Status}</span>
+            </div>
+        `;
+
+            card.onclick = function () {
+                showDiskDetail(index);
+            };
+
+            container.appendChild(card);
+        });
+
+        document.getElementById('statsFooter').textContent = `Total: ${list.length} unidades em ${new Set(list.map(x => x.Server)).size} servidor(es).`;
+    }
+
+    function filterDisks() {
+        const term = document.getElementById('searchShare').value.toLowerCase();
+        const filtered = allDisks.filter(s =>
+            s.Server.toLowerCase().includes(term) ||
+            (s.Label && s.Label.toLowerCase().includes(term))
+        );
+        renderDisks(filtered);
+    }
+
+    function showDiskDetail(index) {
+        const disk = allDisks[index];
+        selectedDiskIndex = index;
+
+        document.getElementById('modalServerName').textContent = disk.Server;
+        document.getElementById('modalDiskLabel').textContent = `${disk.Drive} - ${disk.Label || 'Local Disk'}`;
+
+        document.getElementById('modalServer').textContent = disk.Server;
+        document.getElementById('modalOS').textContent = disk.OS;
+
+        const statusBadge = disk.Status === 'Online'
+            ? '<span class="status-badge status-online">ONLINE</span>'
+            : '<span class="status-badge status-offline">OFFLINE</span>';
+        document.getElementById('modalStatus').innerHTML = statusBadge;
+
+        document.getElementById('modalDrive').textContent = disk.Drive || '-';
+        document.getElementById('modalLabel').textContent = disk.Label || '-';
+        document.getElementById('modalTotal').textContent = `${disk.TotalGB} GB`;
+        document.getElementById('modalFree').textContent = `${disk.FreeGB} GB`;
+        document.getElementById('modalUsed').textContent = `${disk.UsedGB} GB`;
+        document.getElementById('modalPct').textContent = `${disk.PctUsed}%`;
+
+        let barClass = 'bg-safe';
+        if (disk.PctUsed > 75) barClass = 'bg-warn';
+        if (disk.PctUsed > 90) barClass = 'bg-crit';
+
+        const progressBar = document.getElementById('modalProgressBar');
+        progressBar.className = `progress-bar ${barClass}`;
+        progressBar.style.width = `${disk.PctUsed}%`;
+        progressBar.textContent = `${disk.PctUsed}%`;
+
+        document.getElementById('modalFreeSummary').textContent = `${disk.FreeGB} GB`;
+        document.getElementById('modalUsedSummary').textContent = `${disk.UsedGB} GB`;
+
+        document.getElementById('diskDetailModal').classList.add('active');
+    }
+
+    function closeDiskModal() {
+        document.getElementById('diskDetailModal').classList.remove('active');
+    }
+
+    // Auto load
+    document.addEventListener('DOMContentLoaded', loadDisks);
+</script>
+{% endblock %}

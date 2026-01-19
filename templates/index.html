@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NetAudit Intelligent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* Ajustes específicos para a versão inteligente */
+        .type-icon {
+            font-size: 1.5rem;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .type-printer {
+            color: #f472b6;
+        }
+
+        /* Rosa */
+        .type-windows {
+            color: #60a5fa;
+        }
+
+        /* Azul */
+        .type-linux {
+            color: #fbbf24;
+        }
+
+        /* Amarelo */
+        .type-camera {
+            color: #ef4444;
+        }
+
+        /* Vermelho */
+        .type-network {
+            color: #94a3b8;
+        }
+
+        /* Cinza */
+
+        .vendor-badge {
+            background: #334155;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            border: 1px solid #475569;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="brand"><i class="ph-fill ph-brain"></i> NetAudit <span
+                style="font-weight:300; opacity:0.7;">Intelligent AI</span></div>
+    </header>
+
+    <main>
+        <div class="control-container">
+            <section class="control-bar">
+                <div class="input-group">
+                    <i class="ph ph-network"></i>
+                    <input type="text" id="subnet" value="192.168.1.0/24">
+                </div>
+                <button id="btnScan" onclick="startScan()"><i class="ph-bold ph-scan"></i> SCAN INTELIGENTE</button>
+            </section>
+        </div>
+
+        <section class="metrics-grid">
+            <div class="card">
+                <div class="card-title">Status</div>
+                <div class="card-value" id="stStatus">Aguardando</div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progBar"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Dispositivos Encontrados</div>
+                <div class="card-value" id="stFound">0</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Tempo Restante</div>
+                <div class="card-value" id="stEtr">--</div>
+            </div>
+        </section>
+
+        <section class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="50">Tipo</th>
+                            <th>IP / Hostname</th>
+                            <th>Fabricante (OUI)</th>
+                            <th>Sistema / Detalhe</th>
+                            <th>Confiança</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbResult"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal de Detalhes -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="mIp"><i class="ph-fill ph-desktop"></i> <span id="mIpText">192.168.1.1</span></h2>
+                <button class="close-btn" onclick="closeModal()"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <span class="detail-label">Hostname</span>
+                    <span class="detail-val" id="mHostname">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Fabricante</span>
+                    <span class="detail-val" id="mVendor">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">MAC Address</span>
+                    <span class="detail-val" id="mMac">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Sistema Operacional</span>
+                    <span class="detail-val" id="mOs">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Modelo</span>
+                    <span class="detail-val" id="mModel">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Usuário Logado</span>
+                    <span class="detail-val" id="mUser">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Memória RAM</span>
+                    <span class="detail-val" id="mRam">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">CPU</span>
+                    <span class="detail-val" id="mCpu">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Último Boot</span>
+                    <span class="detail-val" id="mUptime">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tipo Detectado</span>
+                    <span class="detail-val" id="mType">-</span>
+                </div>
+                <div class="detail-row" style="flex-direction: column; align-items: flex-start;">
+                    <span class="detail-label">Pastas Compartilhadas</span>
+                    <div id="mShares" style="margin-top: 10px; width: 100%;">-</div>
+                </div>
+                <div class="detail-row" style="flex-direction: column; align-items: flex-start;">
+                    <span class="detail-label">Discos</span>
+                    <div id="mDisks" style="margin-top: 10px; width: 100%;">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timer = null;
+        let scanResults = [];
+
+        function openModal(index) {
+            const data = scanResults[index];
+            if (!data) return;
+
+            document.getElementById('mIpText').innerText = data.ip;
+            document.getElementById('mHostname').innerText = data.hostname || 'N/A';
+            document.getElementById('mVendor').innerText = data.vendor || 'N/A';
+            document.getElementById('mMac').innerText = data.mac || 'N/A';
+            document.getElementById('mOs').innerText = data.os_detail || 'N/A';
+            document.getElementById('mModel').innerText = data.model || 'N/A';
+            document.getElementById('mUser').innerText = data.user || 'N/A';
+            document.getElementById('mType').innerText = data.device_type || 'N/A';
+            document.getElementById('mRam').innerText = data.ram || 'N/A';
+            document.getElementById('mCpu').innerText = data.cpu || 'N/A';
+            document.getElementById('mUptime').innerText = data.uptime || 'N/A';
+
+            // Shares
+            const sharesDiv = document.getElementById('mShares');
+            if (data.shares && data.shares.length > 0) {
+                sharesDiv.innerHTML = data.shares.map(s => `<div class="share-pill">${s}</div>`).join('');
+            } else {
+                sharesDiv.innerHTML = '<span style="color: var(--text-muted);">Nenhuma pasta compartilhada</span>';
+            }
+
+            // Disks
+            const disksDiv = document.getElementById('mDisks');
+            if (data.disks && data.disks.length > 0) {
+                disksDiv.innerHTML = data.disks.map(d => `<div class="share-pill">${d}</div>`).join('');
+            } else {
+                disksDiv.innerHTML = '<span style="color: var(--text-muted);">Nenhum disco detectado</span>';
+            }
+
+            const overlay = document.getElementById('detailModal');
+            overlay.style.display = 'flex';
+            // Force reflow
+            void overlay.offsetWidth;
+            overlay.classList.add('open');
+        }
+
+        function closeModal() {
+            const overlay = document.getElementById('detailModal');
+            overlay.classList.remove('open');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 300);
+        }
+
+        async function startScan() {
+            const sub = document.getElementById('subnet').value;
+            document.getElementById('btnScan').disabled = true;
+            document.getElementById('tbResult').innerHTML = '';
+
+            await fetch('/scan', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subnet: sub })
+            });
+
+            timer = setInterval(poll, 1000);
+        }
+
+        async function poll() {
+            const req = await fetch('/status');
+            const data = await req.json();
+
+            document.getElementById('stStatus').innerText = data.running ? "Escaneando..." : "Concluído";
+            document.getElementById('progBar').style.width = data.progress + "%";
+            document.getElementById('stFound').innerText = data.results.length;
+            document.getElementById('stEtr').innerText = data.etr;
+
+            document.getElementById('stEtr').innerText = data.etr;
+
+            scanResults = data.results; // Guarda globalmente
+
+            const tb = document.getElementById('tbResult');
+            let html = '';
+
+            data.results.forEach((d, i) => {
+                // Define cor do ícone
+                let colorClass = 'type-network';
+                if (d.device_type.includes('printer')) colorClass = 'type-printer';
+                if (d.device_type.includes('windows')) colorClass = 'type-windows';
+                if (d.device_type.includes('linux')) colorClass = 'type-linux';
+                if (d.device_type.includes('camera')) colorClass = 'type-camera';
+
+                html += `
+                <tr onclick="openModal(${i})">
+                    <td style="text-align:center;">
+                        <i class="type-icon ${colorClass} ph-fill ${d.icon}"></i>
+                    </td>
+                    <td>
+                        <div style="font-weight:bold; color:#fff;">${d.ip}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8;">${d.hostname || '-'}</div>
+                    </td>
+                    <td>
+                        <span class="vendor-badge">${d.vendor}</span>
+                        <div style="font-size:0.7rem; color:#64748b; margin-top:2px;">MAC: ${d.mac}</div>
+                    </td>
+                    <td>
+                        <div>${d.os_detail}</div>
+                        <div style="font-size:0.8rem; color:#64748b;">${d.model}</div>
+                    </td>
+                    <td>
+                        <span style="font-size:0.8rem; color:${d.confidence.includes('Alta') ? '#4ade80' : '#facc15'}">
+                            ${d.confidence}
+                        </span>
+                    </td>
+                </tr>
+            `;
+            });
+            tb.innerHTML = html;
+
+            if (!data.running && data.progress === 100) {
+                clearInterval(timer);
+                document.getElementById('btnScan').disabled = false;
+                alert("Scan Finalizado com Sucesso!");
+            }
+        }
+    </script>
+</body>
+
+</html>
