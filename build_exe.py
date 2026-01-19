@@ -49,11 +49,17 @@ args = [
     '--hidden-import=win32com.client',
     '--hidden-import=win32api',
     '--hidden-import=win32con',
+    '--hidden-import=sqlalchemy',
+    '--hidden-import=sqlalchemy.ext.declarative',
+    '--hidden-import=sqlalchemy.orm',
+    '--hidden-import=alembic',
     
     # Coletar todos os subpacotes críticos
     '--collect-all=customtkinter',
     '--collect-all=flask',
     '--collect-all=ldap3',
+    '--collect-all=sqlalchemy',
+    '--collect-all=alembic',
     
     # Excluir módulos desnecessários
     '--exclude-module=tkinter.test',
