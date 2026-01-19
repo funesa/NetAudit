@@ -25,7 +25,7 @@ if getattr(sys, 'frozen', False) and hasattr(os, 'add_dll_directory'):
     # Também garante que o diretório atual e o do EXE estejam lá
     os.add_dll_directory(os.path.dirname(sys.executable))
     
-VERSION = "2026.1.8"
+VERSION = "2026.1.8.1"
 
 # Configuração para PyInstaller
 def resource_path(relative_path):
@@ -229,6 +229,8 @@ class App(ctk.CTk):
                                 "Deseja baixar e instalar agora?"):
             if updater.run_update(url, latest):
                 self.stop_server()
+                if hasattr(self, 'tray_icon'):
+                    self.tray_icon.stop()
                 self.destroy()
                 sys.exit(0)
 
@@ -455,8 +457,27 @@ del "%~f0"
         self.tray_icon = pystray.Icon("NetAudit", image, "NetAudit", menu)
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
+# Variável global para manter o socket aberto e evitar que outro processo abra
+instance_lock = None
+
+def check_single_instance():
+    global instance_lock
+    try:
+        # Tenta criar um socket local em uma porta específica para agir como trava
+        instance_lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        instance_lock.bind(('127.0.0.1', 19876))  # Porta arbitrária para trava
+    except socket.error:
+        # Se falhar, já existe outra instância rodando
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showwarning("NetAudit Já Iniciado", "O NetAudit já está em execução no seu computador.\nProcure pelo ícone azul na bandeja do sistema (perto do relógio).")
+        root.destroy()
+        sys.exit(0)
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    import tkinter as tk # For messageboxes
+    check_single_instance()
     app = App()
     app.mainloop()

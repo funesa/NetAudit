@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.8",
+  "latest_version": "2026.1.8.1",
   "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_System.exe",
-  "release_notes": "Versão 2026.1.8: EDIÇÃO DEFINITIVA ONE-FILE - Resolvido definitivamente os erros de carregamento de DLL e falhas no updater via executável único."
+  "release_notes": "Versão 2026.1.8.1: HOTFIX - Implementada trava de instância única para evitar múltiplos ícones na bandeja e duplicidade de processos."
 }
