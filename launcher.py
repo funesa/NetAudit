@@ -15,10 +15,17 @@ import ctypes
 import subprocess
 import updater
 
-VERSION = "2026.1.7"
-
 # Prevenir abertura de janelas em subprocessos
 CREATE_NO_WINDOW = 0x08000000
+
+# Fix para carregamento de DLLs no Windows (Python 3.8+)
+if getattr(sys, 'frozen', False) and hasattr(os, 'add_dll_directory'):
+    # Adiciona o diretório temporário do PyInstaller ao path de busca de DLLs
+    os.add_dll_directory(sys._MEIPASS)
+    # Também garante que o diretório atual e o do EXE estejam lá
+    os.add_dll_directory(os.path.dirname(sys.executable))
+    
+VERSION = "2026.1.8"
 
 # Configuração para PyInstaller
 def resource_path(relative_path):

@@ -13,13 +13,15 @@ if os.path.exists("build"):
 if os.path.exists("dist"):
     shutil.rmtree("dist")
 
-print(f"🔨 Iniciando compilacao do {APP_NAME} (Modo Onedir Estável)...")
+print(f"Iniciando compilacao do {APP_NAME} (MODO ONEFILE ROBUSTO)...")
+
+PYTHON_DIR = "C:\\Users\\POFJunior\\AppData\\Local\\Programs\\Python\\Python312"
 
 # 3. Argumentos do PyInstaller
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onedir',                    # DEFINITIVO: onedir é mais confiável
+    '--onefile',                   # ARQUIVO ÚNICO (Desejo do usuário)
     '--noconsole',                 
     '--clean',
     '--noupx',                     # Desabilita UPX (evita problemas de DLL)
@@ -28,6 +30,10 @@ args = [
     '--add-data=templates;templates',
     '--add-data=static;static',
     '--add-data=scripts;scripts',
+    
+    # Adicionar DLLs do Python explicitamente para garantir que estejam no _MEIPASS
+    f'--add-binary={PYTHON_DIR}\\python312.dll;.',
+    f'--add-binary={PYTHON_DIR}\\DLLs\\sqlite3.dll;.',
     
     # Imports Ocultos Essenciais
     '--hidden-import=engineio.async_drivers.threading',
@@ -53,15 +59,18 @@ args = [
     '--hidden-import=sqlalchemy.ext.declarative',
     '--hidden-import=sqlalchemy.orm',
     '--hidden-import=alembic',
+    '--hidden-import=pkg_resources', # Frequentemente necessário para metadados
     
-    # Coletar todos os subpacotes críticos
+    # Coletar todos os dados e metadados dos subpacotes críticos
     '--collect-all=customtkinter',
     '--collect-all=flask',
     '--collect-all=ldap3',
     '--collect-all=sqlalchemy',
     '--collect-all=alembic',
+    '--collect-all=engineio',
+    '--collect-all=socketio',
     
-    # Excluir módulos desnecessários
+    # Excluir módulos desnecessários para reduzir tamanho e conflitos
     '--exclude-module=tkinter.test',
     '--exclude-module=matplotlib',
     '--exclude-module=scipy',
