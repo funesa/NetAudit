@@ -8,3 +8,5 @@ python-dotenv
 pandas
 sqlalchemy
 alembic
+APScheduler
+psutil

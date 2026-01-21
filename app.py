@@ -55,6 +55,13 @@ app = Flask(__name__, template_folder=template_folder, static_folder=static_fold
 from ai_actions import ai_bp
 app.register_blueprint(ai_bp)
 
+# Metrics Blueprint (Fase 2)
+try:
+    from api_metrics import metrics_bp
+    app.register_blueprint(metrics_bp)
+except Exception as e:
+    print(f"[WARN] Erro ao carregar API Metrics: {e}")
+
 # --- VERSÃO DO SISTEMA ---
 APP_VERSION = "2026.1.3"
 
@@ -2138,12 +2145,20 @@ def api_glpi_ticket_detail(ticket_id):
 
 
 def start_background_services():
-    """Inicia serviços de background (Scheduler, RDP Gateway, Atalhos)"""
+    """Inicia serviços de background (Scheduler, RDP Gateway, Atalhos, Monitoramento)"""
     scheduler_thread = threading.Thread(target=scheduler_loop, daemon=True)
     scheduler_thread.start()
     
     rdp_thread = threading.Thread(target=rdp_gateway_loop, daemon=True)
     rdp_thread.start()
+
+    # Inicia Engine de Coleta de Métricas (Fase 2)
+    try:
+        from metrics_collector import collector
+        collector.start()
+        print("[INFO] Metrics Collector iniciado com sucesso.")
+    except Exception as e:
+        print(f"[ERROR] Falha ao iniciar Metrics Collector: {e}")
 
     try:
         create_desktop_shortcut()

@@ -60,6 +60,10 @@ args = [
     '--hidden-import=sqlalchemy.orm',
     '--hidden-import=alembic',
     '--hidden-import=pkg_resources', # Frequentemente necessário para metadados
+    '--hidden-import=apscheduler',
+    '--hidden-import=apscheduler.triggers.interval',
+    '--hidden-import=apscheduler.schedulers.background',
+    '--hidden-import=tzlocal',
     
     # Coletar todos os dados e metadados dos subpacotes críticos
     '--collect-all=customtkinter',
@@ -69,6 +73,8 @@ args = [
     '--collect-all=alembic',
     '--collect-all=engineio',
     '--collect-all=socketio',
+    '--collect-all=apscheduler',
+    '--collect-all=tzlocal',
     
     # Excluir módulos desnecessários para reduzir tamanho e conflitos
     '--exclude-module=tkinter.test',
