@@ -31,8 +31,15 @@ args = [
     '--add-data=static;static',
     '--add-data=scripts;scripts',
     
-    # Adicionar DLLs do Python explicitamente para garantir que estejam no _MEIPASS
+    # ---------------------------------------------------------
+    # FIX DEFINITIVO DE DLL: Incluir Runtimes do Visual C++
+    # ---------------------------------------------------------
+    # Python DLL
     f'--add-binary={PYTHON_DIR}\\python312.dll;.',
+    # VCRuntime (Essencial para máquinas limpas)
+    f'--add-binary={PYTHON_DIR}\\vcruntime140.dll;.',
+    f'--add-binary={PYTHON_DIR}\\vcruntime140_1.dll;.',
+    # SQLite
     f'--add-binary={PYTHON_DIR}\\DLLs\\sqlite3.dll;.',
     
     # Imports Ocultos Essenciais
