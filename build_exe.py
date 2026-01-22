@@ -21,7 +21,7 @@ PYTHON_DIR = "C:\\Users\\POFJunior\\AppData\\Local\\Programs\\Python\\Python312"
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onefile',                   # ARQUIVO ÚNICO (Desejo do usuário)
+    '--onedir',                    # MODO PASTA (100% ESTÁVEL)
     '--noconsole',                 
     '--clean',
     '--noupx',                     # Desabilita UPX (evita problemas de DLL)
