@@ -25,7 +25,7 @@ if getattr(sys, 'frozen', False) and hasattr(os, 'add_dll_directory'):
     # Também garante que o diretório atual e o do EXE estejam lá
     os.add_dll_directory(os.path.dirname(sys.executable))
     
-VERSION = "2026.1.11.1"
+VERSION = "2026.1.12"
 
 # Configuração para PyInstaller
 def resource_path(relative_path):

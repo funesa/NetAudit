@@ -32,9 +32,9 @@ from pathlib import Path
 
 def extract_and_run():
     """Extrai o aplicativo e executa"""
-    # Diretório de instalação permanente
-    install_dir = Path(os.environ.get('APPDATA')) / 'NetAudit Enterprise'
-    install_dir.mkdir(parents=True, exist_ok=True)
+    # Diretório de instalação: %APPDATA%\\NetAudit_System
+    appdata = Path(os.environ.get('APPDATA'))
+    install_dir = appdata / 'NetAudit_System'
     
     exe_path = install_dir / 'NetAudit_System.exe'
     
@@ -55,7 +55,7 @@ def extract_and_run():
     
     try:
         with zipfile.ZipFile(tmp_path, 'r') as zf:
-            zf.extractall(install_dir.parent)
+            zf.extractall(appdata)  # Extrai para %APPDATA%, criando NetAudit_System/
         
         print("Instalação concluída!")
         subprocess.Popen([str(exe_path)], cwd=str(install_dir))

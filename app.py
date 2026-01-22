@@ -63,7 +63,7 @@ except Exception as e:
     print(f"[WARN] Erro ao carregar API Metrics: {e}")
 
 # --- VERSÃO DO SISTEMA ---
-APP_VERSION = "2026.1.11.1"
+APP_VERSION = "2026.1.12"
 
 @app.context_processor
 def inject_version():

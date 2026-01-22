@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.11.1",
+  "latest_version": "2026.1.12",
   "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_Installer.exe",
-  "release_notes": "Versão 2026.1.11.1: Correção no Instalador Automático - Resolvido erro de importação que impedia a instalação."
+  "release_notes": "Versão 2026.1.12: FIX DEFINITIVO - Instalador corrigido com caminho de extração e execução corretos. Zero erros de DLL."
 }
