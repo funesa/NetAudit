@@ -41,7 +41,12 @@ def extract_and_run():
     # Se já existe e está atualizado, apenas executa
     if exe_path.exists():
         print("Iniciando NetAudit...")
-        subprocess.Popen([str(exe_path)], cwd=str(install_dir))
+        # Limpar variáveis de ambiente PyInstaller para evitar conflito
+        env = os.environ.copy()
+        for key in list(env.keys()):
+            if key.startswith('_PYI') or key.startswith('_MEIPASS'):
+                del env[key]
+        subprocess.Popen([str(exe_path)], cwd=str(install_dir), env=env)
         return
     
     print("Instalando NetAudit Enterprise...")
@@ -58,7 +63,12 @@ def extract_and_run():
             zf.extractall(appdata)  # Extrai para %APPDATA%, criando NetAudit_System/
         
         print("Instalação concluída!")
-        subprocess.Popen([str(exe_path)], cwd=str(install_dir))
+        # Limpar variáveis de ambiente PyInstaller para evitar conflito
+        env = os.environ.copy()
+        for key in list(env.keys()):
+            if key.startswith('_PYI') or key.startswith('_MEIPASS'):
+                del env[key]
+        subprocess.Popen([str(exe_path)], cwd=str(install_dir), env=env)
         
     finally:
         os.unlink(tmp_path)
