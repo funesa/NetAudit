@@ -24,6 +24,7 @@ shutil.make_archive(str(zip_path.with_suffix('')), 'zip', dist_folder.parent, di
 wrapper_code = '''
 import os
 import sys
+import base64
 import zipfile
 import tempfile
 import subprocess

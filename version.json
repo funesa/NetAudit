@@ -1,5 +1,5 @@
 {
-  "latest_version": "2026.1.11",
+  "latest_version": "2026.1.11.1",
   "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_Installer.exe",
-  "release_notes": "Versão 2026.1.11: NOVO INSTALADOR ESTÁVEL - Solução definitiva para o erro de DLL via instalação automática em pasta fixa."
+  "release_notes": "Versão 2026.1.11.1: Correção no Instalador Automático - Resolvido erro de importação que impedia a instalação."
 }
