@@ -53,10 +53,24 @@ if not exist "%TEMP%\NetAudit.zip" (
 
 echo.
 echo [4/4] Instalando arquivos...
-powershell -Command "Expand-Archive -Path '%TEMP%\NetAudit.zip' -DestinationPath '%INSTALL_DIR%\..' -Force"
+powershell -Command "Expand-Archive -Path '%TEMP%\NetAudit.zip' -DestinationPath '%TEMP%\NetAuditTemp' -Force"
+
+:: Mover para o local correto
+xcopy "%TEMP%\NetAuditTemp\NetAudit_System" "%INSTALL_DIR%\NetAudit_System\" /E /I /H /Y >nul 2>&1
 
 :: Limpar temp
+rmdir /S /Q "%TEMP%\NetAuditTemp" >nul 2>&1
 del "%TEMP%\NetAudit.zip" >nul 2>&1
+
+:: Verificar se instalou corretamente
+if not exist "%INSTALL_DIR%\NetAudit_System\NetAudit_System.exe" (
+    echo.
+    echo ERRO: Falha na instalacao dos arquivos.
+    echo O executável nao foi encontrado em:
+    echo %INSTALL_DIR%\NetAudit_System\NetAudit_System.exe
+    pause
+    exit /b 1
+)
 
 :: Criar atalho no Menu Iniciar
 echo Criando atalho no Menu Iniciar...
