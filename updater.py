@@ -45,6 +45,23 @@ def check_for_updates(current_version):
 def run_update(download_url, latest_version):
     """Baixa a atualização EXE e executa o script de troca."""
     try:
+        import ctypes
+        
+        # Verificar se está rodando como admin
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        
+        # Se não for admin, relançar como admin
+        if not is_admin:
+            import sys
+            if getattr(sys, 'frozen', False):
+                # Se for executável, relançar com elevação
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "runas", sys.executable, 
+                    "--update " + download_url + " " + latest_version, 
+                    None, 1
+                )
+                sys.exit(0)
+        
         # 1. Definir caminhos
         current_exe = sys.executable
         if not getattr(sys, 'frozen', False):
