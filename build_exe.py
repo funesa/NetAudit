@@ -35,12 +35,24 @@ args = [
     # FIX DEFINITIVO DE DLL: Incluir Runtimes do Visual C++
     # ---------------------------------------------------------
     # Python DLL
-    # VCRuntime (Essencial para máquinas limpas)
+    # FIX ULTIMATE DE DLL: Incluir TUDO que o Python precisa
+    # ---------------------------------------------------------
+    # 1. Python Engine
+    f'--add-binary={PYTHON_DIR}\\python312.dll;.',
+    
+    # 2. Visual C++ Runtime (Core)
     f'--add-binary={PYTHON_DIR}\\vcruntime140.dll;.',
     f'--add-binary={PYTHON_DIR}\\vcruntime140_1.dll;.',
-    # MSVCP (Standard C++ Library - Frequentemente ausente)
+    
+    # 3. Standard C++ Library & Concurrency
     f'--add-binary=C:\\Windows\\System32\\msvcp140.dll;.',
-    # SQLite
+    f'--add-binary=C:\\Windows\\System32\\msvcp140_1.dll;.',
+    f'--add-binary=C:\\Windows\\System32\\concrt140.dll;.',
+    
+    # 4. Universal C Runtime (UCRT) - Critical for modern Windows
+    f'--add-binary=C:\\Windows\\System32\\ucrtbase.dll;.',
+    
+    # 5. SQLite
     f'--add-binary={PYTHON_DIR}\\DLLs\\sqlite3.dll;.',
     
     # Imports Ocultos Essenciais
