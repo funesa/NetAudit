@@ -63,7 +63,7 @@ except Exception as e:
     print(f"[WARN] Erro ao carregar API Metrics: {e}")
 
 # --- VERSÃO DO SISTEMA ---
-APP_VERSION = "2026.1.12"
+APP_VERSION = "2.0.0"
 
 @app.context_processor
 def inject_version():
@@ -2459,6 +2459,47 @@ def api_glpi_ticket_detail(ticket_id):
         return jsonify({'success': False, 'error': details['error']})
         
     return jsonify({'success': True, 'ticket': details})
+
+
+@app.route('/api/update/check')
+@login_required
+def api_check_update():
+    """Verifica se há atualizações disponíveis via GitHub/Servidor"""
+    if not getattr(sys, 'frozen', False):
+        return jsonify({'has_update': False, 'message': 'Modo de desenvolvimento'})
+    
+    from updater import check_for_updates
+    has_update, latest, url, sha256 = check_for_updates(APP_VERSION)
+    return jsonify({
+        'has_update': has_update,
+        'latest_version': latest,
+        'download_url': url,
+        'sha256': sha256
+    })
+
+@app.route('/api/update/run', methods=['POST'])
+@login_required
+def api_run_update():
+    """Inicia o processo de download e instalação da atualização"""
+    if not getattr(sys, 'frozen', False):
+        return jsonify({'success': False, 'message': 'Modo de desenvolvimento'})
+    
+    data = request.json
+    url = data.get('url')
+    version = data.get('version')
+    sha256 = data.get('sha256')
+    
+    if not url or not version:
+        return jsonify({'success': False, 'message': 'Parâmetros de atualização ausentes'})
+    
+    from updater import run_update
+    # Executa o update em uma thread para permitir que o Flask envie a resposta JSON antes do app fechar
+    threading.Thread(target=run_update, args=(url, version, sha256), daemon=True).start()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Atualização para v{version} iniciada. O sistema fechará em segundos para concluir a instalação.'
+    })
 
 
 def start_background_services():

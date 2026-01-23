@@ -6,12 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NetAudit{% endblock %}</title>
 
-    <!-- Base Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=31">
-    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}?v=31">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v=23">
-    <link rel="stylesheet" href="{{ url_for('static', filename='clickup-style.css') }}?v=23">
-    <link rel="stylesheet" href="{{ url_for('static', filename='notifications.css') }}?v=1">
+    <!-- Consolidated Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.min.css') }}?v={{ range(1, 9999) | random }}">
     <style>
         /* Smooth Dashboard Transitions */
         .stat-value-dashboard,

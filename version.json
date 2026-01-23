@@ -1,5 +1,8 @@
 {
-  "latest_version": "2026.1.14",
-  "download_url": "https://github.com/funesa/NetAudit/raw/master/dist/NetAudit_Setup.exe",
-  "release_notes": "Versão 2026.1.14: SOLUÇÃO DEFINITIVA - Novo instalador inteligente que baixa do GitHub. Zero conflitos, 100% estável."
+  "latest_version": "2.0.0",
+  "download_url": "https://github.com/funesa/NetAudit/releases/download/v2.0.0/NetAudit.exe",
+  "sha256": "d2bd4b8df21d83787cf29aabd60c5a8028cef4213d6f1552d2d8abdeac11c54b",
+  "release_notes": "✅ Sistema de auto-atualização robusto com validação SHA256\n✅ Interface de configuração restaurada (launcher)\n✅ Executável único otimizado\n✅ Correções de estabilidade no update mechanism",
+  "min_version": "1.0.0",
+  "release_date": "2026-01-23"
 }

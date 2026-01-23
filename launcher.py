@@ -25,7 +25,7 @@ if getattr(sys, 'frozen', False) and hasattr(os, 'add_dll_directory'):
     # Também garante que o diretório atual e o do EXE estejam lá
     os.add_dll_directory(os.path.dirname(sys.executable))
     
-VERSION = "2026.1.12"
+VERSION = "2.0.0"
 
 # Configuração para PyInstaller
 def resource_path(relative_path):
@@ -215,19 +215,19 @@ class App(ctk.CTk):
             
     def check_updates_silent(self):
         """Verifica se há versão nova e pergunta ao usuário."""
-        has_new, latest, url = updater.check_for_updates(VERSION)
+        has_new, latest, url, sha256 = updater.check_for_updates(VERSION)
         if has_new:
             # Pergunta via thread-safe call
-            self.after(0, lambda: self.prompt_update(latest, url))
+            self.after(0, lambda: self.prompt_update(latest, url, sha256))
 
-    def prompt_update(self, latest, url):
+    def prompt_update(self, latest, url, sha256):
         import tkinter as tk
         from tkinter import messagebox
         if messagebox.askyesno("Nova Versão Disponível", 
                                 f"Uma nova versão ({latest}) foi encontrada!\n"
                                 f"Sua versão atual: {VERSION}\n\n"
                                 "Deseja baixar e instalar agora?"):
-            if updater.run_update(url, latest):
+            if updater.run_update(url, latest, sha256):
                 self.stop_server()
                 if hasattr(self, 'tray_icon'):
                     self.tray_icon.stop()
