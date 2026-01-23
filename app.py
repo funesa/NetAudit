@@ -144,18 +144,30 @@ def premium_required(f):
     return decorated_function
 
 def check_setup():
-    """Verifica se o sistema já foi configurado (primeiro usuário)"""
-    users = safe_json_load("users.json", default=[])
-    return len(users) > 0
+    """Verifica se o sistema já foi configurado (primeiro usuário) via SQLite"""
+    from database import get_session
+    from models import User
+    session = get_session()
+    try:
+        count = session.query(User).count()
+        return count > 0
+    except:
+        return False
+    finally:
+        session.close()
 
 def get_master_user():
-    """Retorna o nome do usuário master (primeiro criado)"""
-    users = safe_json_load("users.json", default=[])
-    for u in users:
-        if u.get('is_master'):
-            return u.get('username')
-    # Fallback para o primeiro da lista se is_master não existir (migração)
-    return users[0].get('username') if users else None
+    """Retorna o nome do usuário master (primeiro criado) via SQLite"""
+    from database import get_session
+    from models import User
+    session = get_session()
+    try:
+        user = session.query(User).order_by(User.id).first()
+        return user.username if user else None
+    except:
+        return None
+    finally:
+        session.close()
 
 # Session Configuration
 app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET", "netaudit-default-secret-2026")
@@ -289,23 +301,86 @@ def general_settings_route():
 
 
 def load_db():
-    """Carrega histórico de scans de forma segura"""
-    data = safe_json_load(DB_FILE, default=[])
-    
-    # Garantir que é sempre uma lista
-    if isinstance(data, dict):
-        logger.warning("Convertendo formato antigo de dict para list")
-        return list(data.values())
-    
-    return data if isinstance(data, list) else []
+    """Carrega histórico de dispositivos do SQLite (Legado compatível)"""
+    from database import get_session
+    from models import Device
+    session = get_session()
+    try:
+        devices = session.query(Device).all()
+        results = []
+        for d in devices:
+            results.append({
+                'ip': d.ip,
+                'hostname': d.hostname or 'N/A',
+                'device_type': d.device_type or 'network',
+                'icon': d.icon or 'ph-globe',
+                'vendor': d.vendor or 'Unknown',
+                'mac': d.mac or '-',
+                'os_detail': d.os_detail or 'N/A',
+                'model': d.model or 'N/A',
+                'user': d.user or 'N/A',
+                'ram': d.ram or 'N/A',
+                'cpu': d.cpu or 'N/A',
+                'uptime': d.uptime or 'N/A',
+                'bios': d.bios or 'N/A',
+                'shares': d.shares or [],
+                'disks': d.disks or [],
+                'nics': d.nics or [],
+                'services': d.services or [],
+                'errors': d.errors or [],
+                'printer_data': d.printer_data,
+                'confidence': d.confidence or 'Baixa',
+                'last_seen': d.last_seen.isoformat() if d.last_seen else None
+            })
+        return results
+    except Exception as e:
+        logger.error(f"Erro ao carregar SQLite: {e}")
+        return []
+    finally:
+        session.close()
 
 def save_db(data):
-    """Salva histórico de scans de forma segura com backup"""
-    if not isinstance(data, list):
-        logger.error(f"Tentativa de salvar dados inválidos: {type(data)}")
+    """Grava/Atualiza dispositivos no SQLite de forma atômica"""
+    from database import get_session
+    from models import Device
+    session = get_session()
+    try:
+        for item in data:
+            device = session.query(Device).filter_by(ip=item['ip']).first()
+            if not device:
+                device = Device(ip=item['ip'])
+                session.add(device)
+            
+            # Atualização de campos
+            device.hostname = item.get('hostname', device.hostname)
+            device.device_type = item.get('device_type', device.device_type)
+            device.icon = item.get('icon', device.icon)
+            device.vendor = item.get('vendor', device.vendor)
+            device.mac = item.get('mac', device.mac)
+            device.os_detail = item.get('os_detail', device.os_detail)
+            device.model = item.get('model', device.model)
+            device.user = item.get('user', device.user)
+            device.ram = item.get('ram', device.ram)
+            device.cpu = str(item.get('cpu', device.cpu))
+            device.uptime = item.get('uptime', device.uptime)
+            device.bios = item.get('bios', device.bios)
+            device.shares = item.get('shares', device.shares)
+            device.disks = item.get('disks', device.disks)
+            device.nics = item.get('nics', device.nics)
+            device.services = item.get('services', device.services)
+            device.errors = item.get('errors', device.errors)
+            device.printer_data = item.get('printer_data', device.printer_data)
+            device.confidence = item.get('confidence', device.confidence)
+            device.last_seen = datetime.now()
+            
+        session.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao salvar no SQLite: {e}")
+        session.rollback()
         return False
-    
-    return safe_json_save(DB_FILE, data)
+    finally:
+        session.close()
 
 # --- INTELIGÊNCIA DO DISPOSITIVO ---
 mac_vendor_cache = {}
@@ -421,35 +496,6 @@ scan_status = {
 scan_lock = threading.Lock()
 results_lock = threading.Lock()
 
-def scheduler_loop():
-    global schedule_config
-    while True:
-        # Recarrega a configuração a cada iteração para pegar mudanças
-        schedule_config = load_schedule()
-        
-        if schedule_config.get("enabled"):
-            now = time.time()
-            last_run = schedule_config.get("last_run") or 0
-            
-            interval = int(schedule_config.get("interval", 60))
-            unit = schedule_config.get("unit", "minutes")
-            
-            seconds = interval * 60
-            if unit == "hours": seconds = interval * 3600
-            elif unit == "days": seconds = interval * 86400
-            
-            if now - last_run >= seconds:
-                if not scan_status["running"]:
-                    subnet = schedule_config.get("subnet")
-                    if subnet:
-                        print(f"[SCHEDULER] Iniciando scan automático para {subnet}")
-                        threading.Thread(target=scan_thread, args=(subnet,), daemon=True).start()
-                        schedule_config["last_run"] = now
-                        save_schedule(schedule_config)
-                    else:
-                        print("[SCHEDULER] AVISO: Subnet não configurada, pulando scan automático")
-        
-        time.sleep(30) # Verifica a cada 30 segundos
 
 def rdp_gateway_loop():
     print("[RDP GATEWAY] Iniciando serviço auxiliar Node.js...")
@@ -607,12 +653,25 @@ def scan_thread(subnet):
         
         start = time.time()
 
+        # Carregar credenciais administrativas globais (Sentinel)
+        from utils import load_general_settings
+        settings = load_general_settings()
+        ad_config = settings.get('ad_config', {})
+        
+        # Precedência: Credenciais Sentinel > Variáveis de Ambiente
+        user = ad_config.get('username') or ADMIN_USER
+        password = ad_config.get('password') or ADMIN_PASS
+        domain = ad_config.get('domain', '')
+        
+        # Se houver domínio, concatenar usuário (pode ser necessário dependendo do ambiente)
+        full_user = f"{domain}\\{user}" if domain and "\\" not in user else user
+
         def worker(h):
             res = None
             try:
-                res = get_full_audit(str(h), ADMIN_USER, ADMIN_PASS)
-            except:
-                pass
+                res = get_full_audit(str(h), full_user, password)
+            except Exception as e:
+                logger.debug(f"Erro auditando {h}: {e}")
             finally:
                 with scan_lock:
                     scan_status["scanned"] += 1
@@ -684,24 +743,30 @@ def login():
     username = data.get('username')
     password = data.get('password')
     
-    # Autenticação Segura com Encriptação
-    from security import load_encrypted_json
-    local_users = load_encrypted_json("users.json", fields_to_decrypt=["password"], default=[])
+    # Autenticação via SQLite
+    from database import get_session
+    from models import User
+    from security import decrypt_value
     
-    for u in local_users:
-        if u['username'] == username and u['password'] == password:
-            if not u.get('is_active', True):
-                return jsonify({'success': False, 'message': 'Esta conta está desativada. Entre em contato com o administrador.'})
-                
-            session['username'] = username
-            session['role'] = u.get('role', 'user')
-            session['is_master'] = u.get('is_master', False)
-            session['permissions'] = u.get('permissions', {
-                'type': 'view',
-                'ad': True,
-                'helpdesk': True
-            })
-            return jsonify({'success': True})
+    session_db = get_session()
+    try:
+        user = session_db.query(User).filter_by(username=username).first()
+        if user:
+            # A senha no DB está encriptada
+            decrypted_pass = decrypt_value(user.password)
+            if decrypted_pass == password:
+                session['username'] = username
+                session['role'] = user.role or 'admin'
+                session['permissions'] = {
+                    'type': 'exec' if user.role == 'admin' else 'view',
+                    'ad': True,
+                    'helpdesk': True
+                }
+                return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro no login SQLite: {e}")
+    finally:
+        session_db.close()
     
     # Se falhar local, tenta AD (se configurado)
     from ad_helper import authenticate_ad
@@ -747,25 +812,28 @@ def setup_page():
         return redirect(url_for('login'))
     if request.method == 'POST':
         data = request.json
-        user = data.get('username')
+        user_name = data.get('username')
         pw = data.get('password')
-        if user and pw:
-            # Salvar primeiro usuário de forma encriptada como MASTER
-            from security import save_encrypted_json
-            master_user = {
-                "username": user, 
-                "password": pw, 
-                "role": "admin", 
-                "is_master": True, 
-                "is_active": True,
-                "permissions": {
-                    "type": "exec",
-                    "ad": True,
-                    "helpdesk": True
-                }
-            }
-            save_encrypted_json("users.json", [master_user], fields_to_encrypt=["password"])
-            return jsonify({"success": True})
+        if user_name and pw:
+            from database import get_session
+            from models import User
+            from security import encrypt_value
+            session_db = get_session()
+            try:
+                new_user = User(
+                    username=user_name,
+                    password=encrypt_value(pw),
+                    role="admin",
+                    full_name="Administrador Master"
+                )
+                session_db.add(new_user)
+                session_db.commit()
+                return jsonify({"success": True})
+            except Exception as e:
+                session_db.rollback()
+                return jsonify({"success": False, "message": str(e)})
+            finally:
+                session_db.close()
     return render_template('setup.html')
 
 @app.route('/license', methods=['GET', 'POST'])
@@ -904,6 +972,216 @@ def ad_users_page():
 @premium_required
 def tickets_page():
     return render_template('tickets.html')
+
+# === MONITORING ROUTES (NEW) ===
+@app.route('/monitoring')
+@login_required
+def monitoring_page():
+    """Página de monitoramento em tempo real"""
+    return render_template('monitoring.html')
+
+@app.route('/api/monitoring/overview')
+@login_required
+def api_monitoring_overview():
+    """Retorna overview estatístico e rankings de performance (Sentinel Engine)"""
+    from database import get_session
+    from models import Device, Alert, Metric
+    from sqlalchemy import desc, func
+    from alert_manager import alert_manager
+    
+    session_db = get_session()
+    try:
+        # 1. Estatísticas Básicas
+        total_devices = session_db.query(Device).count()
+        alert_counts = alert_manager.get_active_alerts_count(session_db)
+        
+        devices_with_alerts = session_db.query(Device).join(Alert).filter(
+            Alert.resolved_at == None
+        ).distinct().count()
+        
+        # 2. Rankings Inteligentes (Top 5)
+        def get_top_assets(metric_type, limit=5):
+            # Para disco, capturamos tanto o genérico quanto as partições
+            if metric_type == 'disk_usage':
+                latest_ids = session_db.query(
+                    func.max(Metric.id)
+                ).filter(
+                    (Metric.metric_type == 'disk_usage') | (Metric.metric_type.like('disk_usage_%'))
+                ).group_by(Metric.device_id).subquery()
+            else:
+                latest_ids = session_db.query(
+                    func.max(Metric.id)
+                ).filter(Metric.metric_type == metric_type).group_by(Metric.device_id).subquery()
+            
+            # Query principal com Join no Device para trazer nomes
+            top_metrics = session_db.query(Metric, Device).join(
+                Device, Metric.device_id == Device.id
+            ).filter(Metric.id.in_(latest_ids)).order_by(desc(Metric.value)).limit(limit).all()
+            
+            return [{
+                'hostname': d.hostname or d.ip,
+                'value': m.value,
+                'ip': d.ip
+            } for m, d in top_metrics]
+
+        top_cpu = get_top_assets('cpu_usage')
+        top_ram = get_top_assets('ram_usage')
+        top_disk = get_top_assets('disk_usage')
+        top_latency = get_top_assets('latency')
+
+        return jsonify({
+            'total_devices': total_devices,
+            'healthy_devices': total_devices - devices_with_alerts,
+            'warning_devices': devices_with_alerts,
+            'active_alerts': alert_counts.get('total', 0),
+            'rankings': {
+                'cpu': top_cpu,
+                'ram': top_ram,
+                'disk': top_disk,
+                'latency': top_latency
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no Sentinel Overview: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session_db.close()
+
+@app.route('/api/monitoring/devices')
+@login_required
+def api_monitoring_devices():
+    """Retorna lista de dispositivos com últimas métricas e timestamp da última coleta"""
+    from database import get_session
+    from models import Device, Metric
+    from sqlalchemy import desc
+    
+    session_db = get_session()
+    try:
+        devices = session_db.query(Device).all()
+        
+        result = []
+        for device in devices:
+            # Buscar apenas as últimas 50 métricas para performance (suficiente para o dashboard)
+            latest_metrics = session_db.query(Metric).filter(
+                Metric.device_id == device.id
+            ).order_by(desc(Metric.timestamp)).limit(50).all()
+            
+            # Encontrar a última de cada tipo de forma eficiente
+            cpu = next((m for m in latest_metrics if m.metric_type == 'cpu_usage'), None)
+            ram = next((m for m in latest_metrics if m.metric_type == 'ram_usage'), None)
+            disk = next((m for m in latest_metrics if 'disk_usage' in m.metric_type), None)
+            latency = next((m for m in latest_metrics if m.metric_type == 'latency'), None)
+            
+            # A data da última atualização é a do registro de métrica mais recente
+            last_upd = None
+            if latest_metrics:
+                last_upd = latest_metrics[0].timestamp.isoformat()
+            
+            result.append({
+                'id': device.id,
+                'ip': device.ip,
+                'hostname': device.hostname,
+                'device_type': device.device_type,
+                'cpu_percent': cpu.value if cpu else None,
+                'ram_percent': ram.value if ram else None,
+                'disk_percent': disk.value if disk else None,
+                'latency': latency.value if latency else None,
+                'last_updated': last_upd,
+                'last_seen': device.last_seen.isoformat() if device.last_seen else None
+            })
+        
+        return jsonify({'devices': result})
+    except Exception as e:
+        logger.error(f"Erro ao buscar dispositivos: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session_db.close()
+
+@app.route('/api/monitoring/collect-now', methods=['POST'])
+@login_required
+def api_monitoring_collect_now():
+    """Dispara ciclo de coleta imediatamente"""
+    from metrics_collector import collector
+    # Rodar em thread para não travar a UI
+    import threading
+    threading.Thread(target=collector.collect_all_metrics).start()
+    return jsonify({'success': True, 'message': 'Ciclo de monitoramento disparado!'})
+
+@app.route('/api/metrics/history', methods=['GET'])
+@login_required
+def api_metrics_history():
+    """API de histórico (movida para app.py para garantir funcionamento)"""
+    from database import get_session
+    from models import Metric
+    from datetime import datetime, timedelta
+    
+    session = get_session()
+    try:
+        device_id = request.args.get('device_id', type=int)
+        hours = request.args.get('hours', 24, type=int)
+        since = datetime.now() - timedelta(hours=hours)
+        
+        query = session.query(Metric).filter(Metric.timestamp >= since)
+        if device_id:
+            query = query.filter(Metric.device_id == device_id)
+            
+        metrics = query.order_by(Metric.timestamp).all()
+        
+        history = {'labels': [], 'cpu': [], 'ram': [], 'disk': []}
+        buckets = {}
+        for h in range(hours + 1):
+            dt = (datetime.now() - timedelta(hours=h)).replace(minute=0, second=0, microsecond=0)
+            buckets[dt.isoformat()] = {'cpu': [], 'ram': [], 'disk': []}
+            
+        for m in metrics:
+            bucket_key = m.timestamp.replace(minute=0, second=0, microsecond=0).isoformat()
+            if bucket_key in buckets:
+                m_type = 'cpu' if 'cpu' in m.metric_type else 'ram' if 'ram' in m.metric_type else 'disk' if 'disk' in m.metric_type else None
+                if m_type: buckets[bucket_key][m_type].append(m.value)
+        
+        sorted_keys = sorted(buckets.keys())
+        for key in sorted_keys:
+            history['labels'].append(datetime.fromisoformat(key).strftime('%H:00'))
+            vals = buckets[key]
+            history['cpu'].append(round(sum(vals['cpu'])/len(vals['cpu']), 1) if vals['cpu'] else 0)
+            history['ram'].append(round(sum(vals['ram'])/len(vals['ram']), 1) if vals['ram'] else 0)
+            history['disk'].append(round(sum(vals['disk'])/len(vals['disk']), 1) if vals['disk'] else 0)
+            
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        session.close()
+
+@app.route('/api/monitoring/processes', methods=['GET'])
+@login_required
+def api_monitoring_processes():
+    from metrics_collector import collector
+    from database import get_session
+    from models import Device
+    
+    device_id = request.args.get('device_id', type=int)
+    if not device_id:
+        session = get_session()
+        try:
+            local = session.query(Device).filter(Device.ip == '127.0.0.1').first()
+            if local: device_id = local.id
+        finally: session.close()
+            
+    if not device_id: return jsonify({'success': False, 'message': 'Dispositivo não encontrado'}), 404
+        
+    processes = collector.process_cache.get(device_id, [])
+    return jsonify({'success': True, 'device_id': device_id, 'processes': processes})
+
+@app.route('/api/alerts/<int:alert_id>/acknowledge', methods=['POST'])
+@login_required
+def api_acknowledge_alert(alert_id):
+    """Reconhece um alerta"""
+    from alert_manager import alert_manager
+    username = session.get('username', 'unknown')
+    success = alert_manager.acknowledge_alert(alert_id, username)
+    return jsonify({'success': success})
 
 # --- ROTAS DE API ---
 @app.route('/scan', methods=['POST'])
@@ -1324,23 +1602,22 @@ def settings_users():
 @app.route('/api/system/users', methods=['GET'])
 @login_required
 def api_list_system_users():
-    from security import load_encrypted_json
-    users = load_encrypted_json("users.json", fields_to_decrypt=["password"], default=[])
-    # Sanitize: Remove passwords before sending to frontend
-    sanitized = []
-    for u in users:
-        sanitized.append({
-            "username": u.get("username"),
-            "role": u.get("role", "user"),
-            "is_master": u.get("is_master", False),
-            "is_active": u.get("is_active", True),
-            "permissions": u.get("permissions", {
-                "type": "view",
-                "ad": True,
-                "helpdesk": True
+    from database import get_session
+    from models import User
+    session_db = get_session()
+    try:
+        users = session_db.query(User).all()
+        sanitized = []
+        for u in users:
+            sanitized.append({
+                "username": u.username,
+                "role": u.role or "user",
+                "is_active": True, # SQLite model assumes active if exists
+                "full_name": u.full_name
             })
-        })
-    return jsonify(sanitized)
+        return jsonify(sanitized)
+    finally:
+        session_db.close()
 
 @app.route('/api/system/users', methods=['POST'])
 @login_required
@@ -1350,86 +1627,77 @@ def api_create_system_user():
     username = data.get('username')
     password = data.get('password')
     role = data.get('role', 'user')
-    is_active = data.get('is_active', True)
-    permissions = data.get('permissions', {
-        "type": "view",
-        "ad": True,
-        "helpdesk": True
-    })
     
     if not username or not password:
         return jsonify({'success': False, 'message': 'Campos obrigatórios faltando'})
         
-    from security import load_encrypted_json, save_encrypted_json
-    users = load_encrypted_json("users.json", fields_to_decrypt=["password"], default=[])
+    from database import get_session
+    from models import User
+    from security import encrypt_value
     
-    # Check duplicate
-    if any(u['username'] == username for u in users):
-        return jsonify({'success': False, 'message': 'Usuário já existe'})
-        
-    # VERIFICAÇÃO DE LIMITE DE USUÁRIOS (PRO VS FREE)
-    if len(users) >= lic_manager.get_user_limit():
-        return jsonify({
-            'success': False, 
-            'message': f'Limite de usuários atingido ({lic_manager.get_user_limit()}). Atualize para Premium para usuários ilimitados.'
-        }), 403
-        
-    users.append({
-        "username": username, 
-        "password": password, 
-        "role": role,
-        "is_master": False,
-        "is_active": is_active,
-        "permissions": permissions
-    })
-    save_encrypted_json("users.json", users, fields_to_encrypt=["password"])
-    
-    return jsonify({'success': True})
+    session_db = get_session()
+    try:
+        # Check duplicate
+        if session_db.query(User).filter_by(username=username).first():
+            return jsonify({'success': False, 'message': 'Usuário já existe'})
+            
+        # VERIFICAÇÃO DE LIMITE DE USUÁRIOS (PRO VS FREE)
+        user_count = session_db.query(User).count()
+        if user_count >= lic_manager.get_user_limit():
+            return jsonify({
+                'success': False, 
+                'message': f'Limite de usuários atingido ({lic_manager.get_user_limit()}). Atualize para Premium para usuários ilimitados.'
+            }), 403
+            
+        new_user = User(
+            username=username,
+            password=encrypt_value(password),
+            role=role,
+            full_name=data.get('full_name', username)
+        )
+        session_db.add(new_user)
+        session_db.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session_db.close()
 
+    
 @app.route('/api/system/users/<username>', methods=['PUT'])
 @login_required
 @admin_required
 def api_update_system_user(username):
     data = request.json
-    password = data.get('password') # Optional (empty means no change)
+    password = data.get('password')
     role = data.get('role')
-    is_active = data.get('is_active')
-    permissions = data.get('permissions')
+    full_name = data.get('full_name')
     
-    from security import load_encrypted_json, save_encrypted_json
-    users = load_encrypted_json("users.json", fields_to_decrypt=["password"], default=[])
+    from database import get_session
+    from models import User
+    from security import encrypt_value
     
-    found = False
-    for u in users:
-        if u['username'] == username:
-            # BLOQUEIO USUÁRIO MASTER
-            if u.get('is_master', False):
-                # Se for master, não pode alterar senha por aqui (conforme requisito 2)
-                if password:
-                    return jsonify({'success': False, 'message': 'Não é permitido alterar a senha do usuário Master através deste painel.'}), 403
-                # Master é sempre admin e sempre ativo
-                u['role'] = 'admin'
-                u['is_active'] = True
-            else:
-                if password:
-                    u['password'] = password
-                if role:
-                    u['role'] = role
-                if is_active is not None:
-                    u['is_active'] = is_active
-
-            # Permissões podem ser alteradas para qualquer um (exceto master? Master deve ter tudo)
-            if permissions and not u.get('is_master', False):
-                u['permissions'] = permissions
+    session_db = get_session()
+    try:
+        user = session_db.query(User).filter_by(username=username).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
             
-            found = True
-            break
+        if password:
+            user.password = encrypt_value(password)
+        if role:
+            user.role = role
+        if full_name:
+            user.full_name = full_name
             
-    if found:
-        save_encrypted_json("users.json", users, fields_to_encrypt=["password"])
+        session_db.commit()
         return jsonify({'success': True})
-        
-    return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session_db.close()
 
 @app.route('/api/system/users/<username>', methods=['DELETE'])
 @login_required
@@ -1439,17 +1707,23 @@ def api_delete_system_user(username):
     if username == session.get('username'):
         return jsonify({'success': False, 'message': 'Você não pode excluir a si mesmo'})
         
-    from security import load_encrypted_json, save_encrypted_json
-    users = load_encrypted_json("users.json", fields_to_decrypt=["password"], default=[])
+    from database import get_session
+    from models import User
     
-    original_len = len(users)
-    users = [u for u in users if u['username'] != username]
-    
-    if len(users) < original_len:
-        save_encrypted_json("users.json", users, fields_to_encrypt=["password"])
+    session_db = get_session()
+    try:
+        user = session_db.query(User).filter_by(username=username).first()
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+            
+        session_db.delete(user)
+        session_db.commit()
         return jsonify({'success': True})
-        
-    return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+    except Exception as e:
+        session_db.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        session_db.close()
 
 @app.route('/api/system/uninstall', methods=['POST'])
 @login_required
@@ -1920,6 +2194,49 @@ def api_sidebar_alerts_optimized():
             'disk_warnings': 0, 'failed_logins_severity': 'none'
         })
 
+@app.route('/api/settings/monitoring-credentials', methods=['GET', 'POST'])
+@login_required
+def api_monitoring_credentials():
+    from utils import load_general_settings, save_general_settings
+    
+    if request.method == 'GET':
+        settings = load_general_settings()
+        ad_config = settings.get('ad_config', {})
+        # Retorna apenas se está configurado e o username, nunca a senha
+        return jsonify({
+            'configured': bool(ad_config.get('username') and ad_config.get('password')),
+            'username': ad_config.get('username'),
+            'domain': ad_config.get('domain')
+        })
+    
+    # POST: Salvar credenciais
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Apenas administradores podem configurar credenciais globais'}), 403
+        
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    domain = data.get('domain')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Usuário e senha são obrigatórios'})
+    
+    settings = load_general_settings()
+    settings['ad_config'] = {
+        'username': username,
+        'password': password,
+        'domain': domain
+    }
+    
+    if save_general_settings(settings):
+        # Reiniciar o collector para usar as novas credenciais
+        from metrics_collector import collector
+        collector.stop()
+        collector.start()
+        return jsonify({'success': True, 'message': 'Credenciais administrativas salvas com sucesso!'})
+    else:
+        return jsonify({'success': False, 'message': 'Erro ao salvar configurações'})
+
 @app.route('/settings')
 @login_required
 @admin_required
@@ -2166,13 +2483,25 @@ def start_background_services():
         pass
 
 if __name__ == '__main__':
-    # Inicia a thread do scheduler em background
-    scheduler_thread = threading.Thread(target=scheduler_loop, daemon=True)
-    scheduler_thread.start()
+    # 0. Inicializa Banco de Dados SQLite
+    from database import init_db
+    init_db()
     
-    # Inicia Gateway RDP
-    rdp_thread = threading.Thread(target=rdp_gateway_loop, daemon=True)
-    rdp_thread.start()
+    import multiprocessing
+    multiprocessing.freeze_support()
+    multiprocessing.Process(target=scheduler_loop, daemon=True).start()
+    multiprocessing.Process(target=rdp_gateway_loop, daemon=True).start()
+
+    # Inicia Metrics Collector (Monitoramento em Tempo Real)
+    try:
+        from metrics_collector import collector
+        # Pequeno delay para estabilização do app antes da carga de monitoramento
+        print("[SYSTEM] Aguardando estabilização para iniciar Sentinel...")
+        time.sleep(5) 
+        collector.start()
+        print("[INFO] 📊 Metrics Collector iniciado - Monitoramento ativo!")
+    except Exception as e:
+        print(f"[WARN] Metrics Collector não pôde iniciar: {e}")
 
     # Cria atalho na área de trabalho se necessário
     create_desktop_shortcut()

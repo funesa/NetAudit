@@ -104,3 +104,59 @@ def get_printer_data(ip, community='public'):
     except Exception as e:
         print(f"Erro SNMP para {ip}: {e}")
         return None
+
+
+def get_printer_metrics_for_monitoring(ip, community='public'):
+    """
+    Função específica para monitoramento - retorna métricas estruturadas
+    
+    Returns:
+        dict: {
+            'toner_black': 45,  # Percentual
+            'toner_cyan': 60,
+            'toner_magenta': 55,
+            'toner_yellow': 50,
+            'page_count': 12543,
+            'status': 'idle',
+            'has_errors': False,
+            'low_toner_supplies': ['Black Toner']  # Lista de suprimentos < 10%
+        }
+    """
+    printer_data = get_printer_data(ip, community)
+    
+    if not printer_data:
+        return None
+    
+    metrics = {
+        'page_count': printer_data.get('pages', 0),
+        'status': printer_data.get('status', 'unknown'),
+        'has_errors': printer_data.get('error_state', '0') != '0',
+        'low_toner_supplies': []
+    }
+    
+    # Processar suprimentos para extrair toner
+    for supply in printer_data.get('supplies', []):
+        name = supply.get('name', '').lower()
+        level_str = supply.get('level', '-1')
+        
+        try:
+            level = int(level_str)
+        except:
+            level = -1
+        
+        # Identificar tipo de toner/tinta
+        if 'black' in name or 'preto' in name:
+            metrics['toner_black'] = level
+        elif 'cyan' in name or 'ciano' in name:
+            metrics['toner_cyan'] = level
+        elif 'magenta' in name:
+            metrics['toner_magenta'] = level
+        elif 'yellow' in name or 'amarelo' in name:
+            metrics['toner_yellow'] = level
+        
+        # Alertas de toner baixo (< 10%)
+        if level != -1 and level < 10:
+            metrics['low_toner_supplies'].append(supply.get('name'))
+    
+    return metrics
+

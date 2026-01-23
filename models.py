@@ -146,3 +146,19 @@ class MonitoringTemplate(Base):
     
     def __repr__(self):
         return f"<MonitoringTemplate(name='{self.name}', type='{self.device_type}')>"
+
+
+class User(Base):
+    """Usuários do sistema (Dashboard)"""
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)  # Hash da senha
+    role = Column(String(50), default='admin')
+    full_name = Column(String(255))
+    last_login = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.now)
+    
+    def __repr__(self):
+        return f"<User(username='{self.username}', role='{self.role}')>"

@@ -1,7 +1,0 @@
-{
-  "enabled": true,
-  "interval": 5,
-  "unit": "minutes",
-  "last_run": 1768501348.0263379,
-  "subnet": "172.23.51.1/23"
-}

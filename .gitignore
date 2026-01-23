@@ -45,6 +45,28 @@ Thumbs.db
 flask_session/
 *.backup
 
+# Database & Data
+netaudit.db
+netaudit.db-shm
+netaudit.db-wal
+scan_history.json*
+users.json
+general_settings.json
+scan_schedule.json
+ad_config.json
+ad_cache.json
+ad_last_connection.json
+glpi_config.json
+license.json
+
+# Scripts de utilidade local
+check_db_integrity.py
+check_monitoring.py
+test_sentinel.py
+migrate_users.py
+init_triggers.py
+setup_monitoring.py
+
 # Build artifacts
 *.spec
 NetAudit_*.exe

@@ -1,0 +1,1283 @@
+{% extends "layout.html" %}
+
+{% block title %}Monitoramento - NetAudit{% endblock %}
+{% block page_title %}
+<div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span>🔍 Monitoramento</span>
+        <span
+            style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+            🆕 NEW
+        </span>
+    </div>
+    <button onclick="openCredsModal()" class="btn-primary-mon" style="font-size: 0.8rem; padding: 8px 16px;">
+        <i class="ph-bold ph-key"></i> Credenciais AD/WMI
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Credentials Warning Banner -->
+<div id="credsWarning" class="alert-banner-mon"
+    style="display: none; margin-bottom: 24px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="ph-fill ph-warning-octagon" style="color: #fbbf24; font-size: 1.5rem;"></i>
+        <div>
+            <h4 style="margin: 0; color: #fbbf24; font-size: 0.9rem;">Credenciais não configuradas</h4>
+            <p style="margin: 0; color: var(--text-secondary); font-size: 0.8rem;">O monitoramento de máquinas Windows
+                remotas falhará sem credenciais administrativas.</p>
+        </div>
+    </div>
+    <button onclick="openCredsModal()" class="btn-alert" style="background: #fbbf24; color: #000;">Configurar
+        Agora</button>
+</div>
+
+<!-- Modal de Credenciais -->
+<div id="credsModal" class="modal-mon">
+    <div class="modal-content-mon" style="max-width: 450px;">
+        <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <i class="ph-fill ph-lock-key"></i>
+            Credenciais Administrativas
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 24px;">Configure as credenciais
+            (Domain Admin ou Local Admin) que o sistema usará para coletar métricas WMI.</p>
+
+        <div class="form-group-mon">
+            <label>Domínio (Opcional)</label>
+            <input type="text" id="credsDomain" placeholder="ex: MEUDOMINIO" class="input-mon">
+        </div>
+
+        <div class="form-group-mon">
+            <label>Usuário</label>
+            <input type="text" id="credsUser" placeholder="ex: administrador" class="input-mon">
+        </div>
+
+        <div class="form-group-mon">
+            <label>Senha</label>
+            <input type="password" id="credsPass" placeholder="••••••••" class="input-mon">
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
+            <button onclick="closeCredsModal()" class="btn-alert secondary" style="flex: 1;">Cancelar</button>
+            <button onclick="saveCreds()" class="btn-alert" style="flex: 2; background: var(--primary);">Salvar
+                Credenciais</button>
+        </div>
+    </div>
+</div>
+<style>
+    .monitoring-container {
+        padding: 0;
+        width: 100%;
+    }
+
+    /* Header Stats */
+    .monitoring-header {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card-monitoring {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card-monitoring::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--accent-gradient);
+    }
+
+    .stat-card-monitoring.blue::before {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .stat-card-monitoring.green::before {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .stat-card-monitoring.red::before {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+
+    .stat-card-monitoring.yellow::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .stat-card-monitoring:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .stat-icon-mon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+
+    .stat-card-monitoring.blue .stat-icon-mon {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+    }
+
+    .stat-card-monitoring.green .stat-icon-mon {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+    }
+
+    .stat-card-monitoring.red .stat-icon-mon {
+        background: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+    }
+
+    .stat-card-monitoring.yellow .stat-icon-mon {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+
+    .stat-value-mon {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+
+    .stat-label-mon {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* Main Grid */
+    .monitoring-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    /* Panel */
+    .panel-monitoring {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .panel-title-mon {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .panel-title-mon i {
+        color: var(--primary);
+    }
+
+    /* Device List */
+    .device-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .device-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: var(--bg-hover);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .device-item:hover {
+        background: var(--border);
+        transform: translateX(4px);
+    }
+
+    .device-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        background: rgba(99, 102, 241, 0.1);
+        color: #818cf8;
+    }
+
+    .device-item.active-selection {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        transform: scale(1.02);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .metric-badge.ping {
+        background: rgba(139, 92, 246, 0.1);
+        color: #a78bfa;
+        border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .device-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .device-name {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+
+    .device-ip {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .device-metrics {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .metric-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .metric-badge.ok {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+        color: #34d399;
+    }
+
+    .metric-badge.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border-color: rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+    }
+
+    .metric-badge.critical {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+
+    /* Alerts List */
+    .alert-list-mon {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .alert-item-mon {
+        padding: 16px;
+        border-radius: 12px;
+        border-left: 4px solid;
+        background: var(--bg-hover);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .alert-item-mon:hover {
+        background: var(--border);
+        transform: translateX(4px);
+    }
+
+    .alert-item-mon.disaster {
+        border-left-color: #dc2626;
+        background: rgba(220, 38, 38, 0.05);
+    }
+
+    .alert-item-mon.high {
+        border-left-color: #ef4444;
+        background: rgba(239, 68, 68, 0.05);
+    }
+
+    .alert-item-mon.average {
+        border-left-color: #f59e0b;
+        background: rgba(245, 158, 11, 0.05);
+    }
+
+    .alert-item-mon.warning {
+        border-left-color: #fbbf24;
+        background: rgba(251, 191, 36, 0.05);
+    }
+
+    .alert-item-mon.info {
+        border-left-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .alert-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .alert-title-mon {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+
+    .alert-time {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .alert-message {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        line-height: 1.4;
+    }
+
+    .alert-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .btn-alert {
+        padding: 6px 12px;
+        border: none;
+        background: var(--primary);
+        color: white;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-alert:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+    }
+
+    .btn-alert.secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-secondary);
+    }
+
+    .btn-alert.secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Charts Section */
+    .charts-grid-mon {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    .chart-panel-mon {
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .chart-wrapper-mon {
+        position: relative;
+        height: 300px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .monitoring-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Rankings Styling */
+    .ranking-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ranking-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 4px 0;
+    }
+
+    .ranking-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .ranking-name {
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .ranking-value {
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .ranking-bar-bg {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .ranking-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1s ease-in-out;
+    }
+
+    .ranking-bar-fill.cpu {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .ranking-bar-fill.ram {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .ranking-bar-fill.disk {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .ranking-bar-fill.latency {
+        background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    }
+
+    .charts-grid-mon-sentinel {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+
+    @media (max-width: 1400px) {
+        .charts-grid-mon-sentinel {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Modal Styles */
+    .modal-mon {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .modal-content-mon {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 32px;
+        width: 90%;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .form-group-mon {
+        margin-bottom: 20px;
+    }
+
+    .form-group-mon label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .input-mon {
+        width: 100%;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        border-radius: 10px;
+        color: var(--text-main);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .input-mon:focus {
+        border-color: var(--primary);
+    }
+
+    .btn-primary-mon {
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary-mon:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+
+        .monitoring-header,
+        .charts-grid-mon,
+        .charts-grid-mon-sentinel {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="monitoring-container">
+    <!-- Header Stats -->
+    <div class="monitoring-header">
+        <div class="stat-card-monitoring blue">
+            <div class="stat-icon-mon">
+                <i class="ph-fill ph-devices"></i>
+            </div>
+            <div class="stat-value-mon" id="totalDevicesMonitored">...</div>
+            <div class="stat-label-mon">Dispositivos Monitorados</div>
+        </div>
+
+        <div class="stat-card-monitoring green">
+            <div class="stat-icon-mon">
+                <i class="ph-fill ph-check-circle"></i>
+            </div>
+            <div class="stat-value-mon" id="devicesHealthy">...</div>
+            <div class="stat-label-mon">Saudáveis</div>
+        </div>
+
+        <div class="stat-card-monitoring yellow">
+            <div class="stat-icon-mon">
+                <i class="ph-fill ph-warning"></i>
+            </div>
+            <div class="stat-value-mon" id="devicesWarning">...</div>
+            <div class="stat-label-mon">Com Alertas</div>
+        </div>
+
+        <div class="stat-card-monitoring red">
+            <div class="stat-icon-mon">
+                <i class="ph-fill ph-bell-ringing"></i>
+            </div>
+            <div class="stat-value-mon" id="activeAlerts">...</div>
+            <div class="stat-label-mon">Alertas Ativos</div>
+        </div>
+    </div>
+
+    <!-- Sentinel Insights (Rankings) -->
+    <div class="charts-grid-mon-sentinel" style="margin-bottom: 24px;">
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon" style="font-size: 1rem;">
+                <i class="ph-fill ph-target"></i>
+                Rank CPU (%)
+            </h2>
+            <div id="rankingCPU" class="ranking-list">
+                <div class="empty-state">Carregando...</div>
+            </div>
+        </div>
+
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon" style="font-size: 1rem;">
+                <i class="ph-fill ph-memory"></i>
+                Rank RAM (%)
+            </h2>
+            <div id="rankingRAM" class="ranking-list">
+                <div class="empty-state">Carregando...</div>
+            </div>
+        </div>
+
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon" style="font-size: 1rem;">
+                <i class="ph-fill ph-hard-drive-break"></i>
+                Rank Disco (%)
+            </h2>
+            <div id="rankingDISK" class="ranking-list">
+                <div class="empty-state">Carregando...</div>
+            </div>
+        </div>
+
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon" style="font-size: 1rem;">
+                <i class="ph-fill ph-activity"></i>
+                Rank Latência (ms)
+            </h2>
+            <div id="rankingLATENCY" class="ranking-list">
+                <div class="empty-state">Carregando...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts & Processes (Crucial Info) -->
+    <div class="monitoring-grid" style="margin-bottom: 32px;">
+        <!-- Alerts Panel -->
+        <div class="panel-monitoring">
+            <h2 class="panel-title-mon">
+                <i class="ph-fill ph-bell"></i>
+                Alertas Ativos
+            </h2>
+            <div class="alert-list-mon" id="alertList">
+                <!-- Populated by JS -->
+                <div class="empty-state">
+                    <i class="ph-fill ph-check-circle"></i>
+                    <p>Nenhum alerta ativo</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processes Panel (Real-time Focus) -->
+        <div class="panel-monitoring">
+            <h2 class="panel-title-mon">
+                <i class="ph-fill ph-cpu"></i>
+                Processos Críticos (Top 10)
+            </h2>
+            <div class="alert-list-mon" id="processList">
+                <!-- Populated by JS -->
+                <div class="empty-state">
+                    <i class="ph-fill ph-spinner-gap" style="animation: spin 1s linear infinite;"></i>
+                    <p>Carregando processos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section (History) -->
+    <div class="charts-grid-mon" style="margin-bottom: 32px;">
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon">
+                <i class="ph-fill ph-chart-line"></i>
+                CPU - Últimas 24h
+            </h2>
+            <div class="chart-wrapper-mon">
+                <canvas id="cpuChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon">
+                <i class="ph-fill ph-chart-bar"></i>
+                RAM - Últimas 24h
+            </h2>
+            <div class="chart-wrapper-mon">
+                <canvas id="ramChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-panel-mon">
+            <h2 class="panel-title-mon">
+                <i class="ph-fill ph-hard-drive"></i>
+                Disco - Últimas 24h
+            </h2>
+            <div class="chart-wrapper-mon">
+                <canvas id="diskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device List (Detailed Fleet) -->
+    <div class="panel-monitoring">
+        <h2 class="panel-title-mon">
+            <i class="ph-fill ph-monitor"></i>
+            Dispositivos em Monitoramento
+        </h2>
+        <div class="device-list" id="deviceList"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px;">
+            <!-- Populated by JS -->
+            <div class="empty-state">
+                <i class="ph-fill ph-spinner-gap" style="animation: spin 1s linear infinite;"></i>
+                <p>Carregando dispositivos...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+    let selectedDeviceId = null;
+    let charts = {
+        cpu: null,
+        ram: null,
+        disk: null
+    };
+
+    let updateInterval = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        loadMonitoringData();
+        checkCredsConfig(); // Verifica se credenciais estão configuradas
+        updateInterval = setInterval(loadMonitoringData, 30000); // Update every 30s
+    });
+
+    async function checkCredsConfig() {
+        try {
+            const res = await fetch('/api/settings/monitoring-credentials');
+            const data = await res.json();
+
+            if (!data.configured) {
+                document.getElementById('credsWarning').style.display = 'flex';
+            } else {
+                document.getElementById('credsWarning').style.display = 'none';
+                document.getElementById('credsUser').value = data.username || '';
+                document.getElementById('credsDomain').value = data.domain || '';
+                // Não preenchemos senha por segurança no GET
+            }
+        } catch (e) {
+            console.error("Erro ao verificar credenciais:", e);
+        }
+    }
+
+    function openCredsModal() {
+        document.getElementById('credsModal').style.display = 'flex';
+    }
+
+    function closeCredsModal() {
+        document.getElementById('credsModal').style.display = 'none';
+    }
+
+    async function saveCreds() {
+        const username = document.getElementById('credsUser').value;
+        const password = document.getElementById('credsPass').value;
+        const domain = document.getElementById('credsDomain').value;
+
+        if (!username || !password) {
+            alert("Usuário e senha são obrigatórios!");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/settings/monitoring-credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, domain })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert("Credenciais salvas com sucesso! O serviço de monitoramento foi reiniciado.");
+                closeCredsModal();
+                checkCredsConfig();
+            } else {
+                alert("Erro ao salvar: " + data.message);
+            }
+        } catch (e) {
+            alert("Erro na requisição. Verifique o console.");
+            console.error(e);
+        }
+    }
+
+    async function forceCollect() {
+        try {
+            const btn = event.currentTarget || document.querySelector('button[onclick="forceCollect()"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation: spin 1s linear infinite;"></i> Coletando...';
+
+            const res = await fetch('/api/monitoring/collect-now', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                // Poll for data every 5s for the next 30s
+                let count = 0;
+                const poll = setInterval(async () => {
+                    await loadMonitoringData();
+                    count++;
+                    if (count > 6) {
+                        clearInterval(poll);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                }, 5000);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erro ao disparar coleta");
+        }
+    }
+
+    async function loadMonitoringData() {
+        try {
+            // Load overview stats
+            const statsRes = await fetch('/api/monitoring/overview');
+            if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
+            const stats = await statsRes.json();
+
+            // Update header stats
+            const setStat = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val !== undefined ? val : 0;
+            };
+
+            setStat('totalDevicesMonitored', stats.total_devices);
+            setStat('devicesHealthy', stats.healthy_devices);
+            setStat('devicesWarning', stats.warning_devices);
+            setStat('activeAlerts', stats.active_alerts);
+
+            // Render Rankings
+            if (stats.rankings) {
+                renderRankings(stats.rankings);
+            }
+
+            // Load selection-specific data in parallel
+            await Promise.allSettled([
+                loadDevices(),
+                loadAlerts(),
+                loadProcesses(selectedDeviceId),
+                loadCharts(selectedDeviceId)
+            ]);
+
+        } catch (error) {
+            console.error('Erro ao carregar dados de monitoramento:', error);
+            // Se falhar, limpa os esqueletos de carregamento
+            ['CPU', 'RAM', 'DISK', 'LATENCY'].forEach(t => {
+                const el = document.getElementById(`ranking${t}`);
+                if (el) el.innerHTML = '<div class="empty-state">Erro ao carregar rankings</div>';
+            });
+            const dList = document.getElementById('deviceList');
+            if (dList && dList.innerHTML.includes('Carregando')) {
+                dList.innerHTML = '<div class="empty-state">Erro ao conectar com o servidor</div>';
+            }
+        }
+    }
+
+    function renderRankings(rankings) {
+        if (!rankings) return;
+
+        const types = ['cpu', 'ram', 'disk', 'latency'];
+        types.forEach(type => {
+            const container = document.getElementById(`ranking${type.toUpperCase()}`);
+            if (!container) return;
+
+            if (!rankings[type] || rankings[type].length === 0) {
+                container.innerHTML = '<div class="empty-state">Sem dados importantes</div>';
+                return;
+            }
+
+            container.innerHTML = rankings[type].map(item => {
+                const colorClass = type;
+                const unit = type === 'latency' ? 'ms' : '%';
+                // Para latência, a barra cheia representa o maior valor do rank (normalize)
+                const vals = rankings[type].map(i => i.value);
+                const maxVal = Math.max(...vals, 1); // Evita divisão por zero
+                const barWidth = type === 'latency' ? (item.value / maxVal * 100) : item.value;
+
+                return `
+                    <div class="ranking-item">
+                        <div class="ranking-meta">
+                            <span class="ranking-name" title="${item.hostname} (${item.ip})">${item.hostname}</span>
+                            <span class="ranking-value">${item.value}${unit}</span>
+                        </div>
+                        <div class="ranking-bar-bg">
+                            <div class="ranking-bar-fill ${colorClass}" style="width: ${Math.min(100, Math.max(5, barWidth))}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        });
+    }
+
+    async function loadProcesses(deviceId) {
+        try {
+            const url = deviceId ? `/api/monitoring/processes?device_id=${deviceId}` : '/api/monitoring/processes';
+            const res = await fetch(url);
+            const data = await res.json();
+
+            const processList = document.getElementById('processList');
+
+            if (!data.processes || data.processes.length === 0) {
+                processList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph-fill ph-info"></i>
+                        <p>Sem dados de processos no momento</p>
+                    </div>
+                `;
+                return;
+            }
+
+            processList.innerHTML = data.processes.map(proc => {
+                const barColor = proc.memory_percent > 10 ? '#f87171' : proc.memory_percent > 5 ? '#fbbf24' : '#60a5fa';
+
+                return `
+                    <div class="alert-item-mon info" style="cursor: default; border-left: none; padding: 12px 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;">${proc.name}</span>
+                            <span style="color: var(--text-secondary); font-size: 0.8rem; font-weight: 700;">${proc.memory_percent}% RAM</span>
+                        </div>
+                        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+                            <div style="width: ${Math.min(proc.memory_percent * 5, 100)}%; height: 100%; background: ${barColor}; transition: width 1s ease;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error('Erro ao carregar processos:', error);
+        }
+    }
+
+    async function loadDevices() {
+        try {
+            const res = await fetch('/api/monitoring/devices');
+            const data = await res.json();
+
+            const deviceList = document.getElementById('deviceList');
+
+            if (!data.devices || data.devices.length === 0) {
+                deviceList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph-fill ph-info"></i>
+                        <p>Nenhum dispositivo sendo monitorado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            deviceList.innerHTML = data.devices.map(device => {
+                const cpuClass = device.cpu_percent > 85 ? 'critical' : device.cpu_percent > 70 ? 'warning' : 'ok';
+                const ramClass = device.ram_percent > 85 ? 'critical' : device.ram_percent > 70 ? 'warning' : 'ok';
+                const diskClass = device.disk_percent > 85 ? 'critical' : device.disk_percent > 70 ? 'warning' : 'ok';
+
+                const icon = getDeviceIcon(device.device_type);
+                const updatedTime = device.last_updated ? getTimeAgo(device.last_updated) : 'Nunca';
+                const isSelected = selectedDeviceId === device.id ? 'active-selection' : '';
+
+                return `
+                    <div class="device-item ${isSelected}" onclick="selectDevice(${device.id})">
+                        <div class="device-icon">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div class="device-info">
+                            <div class="device-name">${device.hostname || 'Unknown'}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="device-ip">${device.ip}</span>
+                                <span style="font-size: 0.7rem; color: var(--text-muted); font-style: italic;">
+                                    <i class="ph ph-clock"></i> ${updatedTime}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="device-metrics">
+                            <div class="metric-badge ${cpuClass}">CPU ${device.cpu_percent !== null ? device.cpu_percent + '%' : 'N/A'}</div>
+                            <div class="metric-badge ${ramClass}">RAM ${device.ram_percent !== null ? device.ram_percent + '%' : 'N/A'}</div>
+                            <div class="metric-badge ${diskClass}">Disco ${device.disk_percent !== null ? device.disk_percent + '%' : 'N/A'}</div>
+                            ${device.latency !== undefined && device.latency !== null ? `<div class="metric-badge ping">Ping ${device.latency}ms</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Se não houver seleção, tenta selecionar o localhost automaticamente
+            if (selectedDeviceId === null && data.devices.length > 0) {
+                const local = data.devices.find(d => d.ip === '127.0.0.1');
+                if (local) selectDevice(local.id);
+                else selectDevice(data.devices[0].id);
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar dispositivos:', error);
+        }
+    }
+
+    async function loadAlerts() {
+        try {
+            const res = await fetch('/api/alerts/active');
+            const data = await res.json();
+
+            const alertList = document.getElementById('alertList');
+
+            if (!data.alerts || data.alerts.length === 0) {
+                alertList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph-fill ph-check-circle"></i>
+                        <p>Nenhum alerta ativo! 🎉</p>
+                    </div>
+                `;
+                return;
+            }
+
+            alertList.innerHTML = data.alerts.map(alert => {
+                const timeAgo = getTimeAgo(alert.timestamp);
+
+                return `
+                    <div class="alert-item-mon ${alert.severity}">
+                        <div class="alert-header">
+                            <div class="alert-title-mon">${alert.title}</div>
+                            <div class="alert-time">${timeAgo}</div>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                        <div class="alert-actions">
+                            <button class="btn-alert" onclick="acknowledgeAlert(${alert.id})">
+                                <i class="ph ph-check"></i> Reconhecer
+                            </button>
+                            <button class="btn-alert secondary" onclick="viewDevice(${alert.device_id})">
+                                <i class="ph ph-monitor"></i> Ver Dispositivo
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error('Erro ao carregar alertas:', error);
+        }
+    }
+
+    async function loadCharts(deviceId) {
+        try {
+            const url = deviceId ? `/api/metrics/history?device_id=${deviceId}` : '/api/metrics/history';
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.labels || data.labels.length === 0) return;
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1
+                    }
+                },
+                elements: {
+                    line: { tension: 0.4 },
+                    point: { radius: 0 }
+                }
+            };
+
+            // CPU Chart
+            if (!charts.cpu) {
+                const ctx = document.getElementById('cpuChart').getContext('2d');
+                charts.cpu = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Uso de CPU',
+                            data: data.cpu,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: commonOptions
+                });
+            } else {
+                charts.cpu.data.labels = data.labels;
+                charts.cpu.data.datasets[0].data = data.cpu;
+                charts.cpu.update();
+            }
+
+            // RAM Chart
+            if (!charts.ram) {
+                const ctx = document.getElementById('ramChart').getContext('2d');
+                charts.ram = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Uso de RAM',
+                            data: data.ram,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: commonOptions
+                });
+            } else {
+                charts.ram.data.labels = data.labels;
+                charts.ram.data.datasets[0].data = data.ram;
+                charts.ram.update();
+            }
+
+            // Disk Chart
+            if (!charts.disk) {
+                const ctx = document.getElementById('diskChart').getContext('2d');
+                charts.disk = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Uso de Disco',
+                            data: data.disk,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: commonOptions
+                });
+            } else {
+                charts.disk.data.labels = data.labels;
+                charts.disk.data.datasets[0].data = data.disk;
+                charts.disk.update();
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar gráficos:', error);
+        }
+    }
+
+    async function acknowledgeAlert(alertId) {
+        try {
+            const res = await fetch(`/api/alerts/${alertId}/acknowledge`, {
+                method: 'POST'
+            });
+
+            if (res.ok) {
+                loadAlerts(); // Reload alerts
+            }
+        } catch (error) {
+            console.error('Erro ao reconhecer alerta:', error);
+        }
+    }
+
+    function selectDevice(deviceId) {
+        selectedDeviceId = deviceId;
+
+        // Update selection UI
+        document.querySelectorAll('.device-item').forEach(el => {
+            el.classList.remove('active-selection');
+        });
+
+        // Find the element and highlight it
+        // We can wait for the next loadDevices to catch it, or do it now
+        // But better to just trigger a data load
+        loadProcesses(deviceId);
+        loadCharts(deviceId);
+
+        // We should also highlight the item in the list
+        // Since loadDevices runs every 30s, we might wait a bit. 
+        // Let's do a quick manual highlight for snappiness.
+        // (Wait for DOM to be populated if needed)
+    }
+
+    function viewDevice(deviceId) {
+        // Redirect to device details or show modal
+        window.location.href = `/scan?device=${deviceId}`;
+    }
+
+    function getDeviceIcon(deviceType) {
+        const icons = {
+            'windows': 'ph-fill ph-windows-logo',
+            'server': 'ph-fill ph-server',
+            'printer': 'ph-fill ph-printer',
+            'network': 'ph-fill ph-router',
+            'linux': 'ph-fill ph-terminal'
+        };
+        return icons[deviceType] || 'ph-fill ph-desktop';
+    }
+
+    function getTimeAgo(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000); // seconds
+
+        if (diff < 60) return 'Agora mesmo';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m atrás`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+        return `${Math.floor(diff / 86400)}d atrás`;
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function () {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+</script>
+
+<style>
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+{% endblock %}
