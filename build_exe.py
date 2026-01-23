@@ -21,7 +21,7 @@ PYTHON_DIR = "C:\\Users\\POFJunior\\AppData\\Local\\Programs\\Python\\Python312"
 args = [
     MAIN_SCRIPT,
     f'--name={APP_NAME}',
-    '--onedir',                    # MODO PASTA (100% ESTÁVEL)
+    '--onefile',                   # MODO ARQUIVO ÚNICO (Conforme solicitado)
     '--noconsole',                 
     '--clean',
     '--noupx',                     # Desabilita UPX (evita problemas de DLL)
@@ -35,10 +35,11 @@ args = [
     # FIX DEFINITIVO DE DLL: Incluir Runtimes do Visual C++
     # ---------------------------------------------------------
     # Python DLL
-    f'--add-binary={PYTHON_DIR}\\python312.dll;.',
     # VCRuntime (Essencial para máquinas limpas)
     f'--add-binary={PYTHON_DIR}\\vcruntime140.dll;.',
     f'--add-binary={PYTHON_DIR}\\vcruntime140_1.dll;.',
+    # MSVCP (Standard C++ Library - Frequentemente ausente)
+    f'--add-binary=C:\\Windows\\System32\\msvcp140.dll;.',
     # SQLite
     f'--add-binary={PYTHON_DIR}\\DLLs\\sqlite3.dll;.',
     
@@ -84,7 +85,7 @@ args = [
     '--collect-all=tzlocal',
     
     # Excluir módulos desnecessários para reduzir tamanho e conflitos
-    '--exclude-module=tkinter.test',
+    # '--exclude-module=tkinter.test', # Comentado para garantir que o tkinter funcione
     '--exclude-module=matplotlib',
     '--exclude-module=scipy',
     '--exclude-module=pytest',

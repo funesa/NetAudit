@@ -1,8 +1,8 @@
 {
-  "latest_version": "2.0.1",
-  "download_url": "https://github.com/funesa/NetAudit/releases/download/v2.0.1/NetAudit.exe",
-  "sha256": "e1c24da63c975518aca712823a750dafbebb672290ae2f5148f1a9d62600338e",
-  "release_notes": "✅ Correção crítica: Erro 'tkinter not found' resolvido\n✅ Persistência de dados: Configurações agora salvas em %APPDATA%/NetAudit\n✅ Auto-migração: Seus dados antigos são importados automaticamente",
+  "latest_version": "2.0.2",
+  "download_url": "https://github.com/funesa/NetAudit/releases/download/v2.0.2/NetAudit.exe",
+  "sha256": "fbe33181cabb147b8f79ce234d07d656d820abc7b7d4d222cff4a135e7bd09ed",
+  "release_notes": "✅ Correção DLL Runtime: Adicionado msvcp140.dll ausente em sistemas limpos\n✅ Fix 'Failed to load Python DLL'",
   "min_version": "1.0.0",
   "release_date": "2026-01-23"
 }
