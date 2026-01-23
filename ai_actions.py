@@ -17,8 +17,8 @@ ai_bp = Blueprint('ai_actions', __name__)
 def load_scan_data():
     """Carrega o histórico de ativos escaneados (scan_history.json)"""
     try:
-        current_dir = os.getcwd() # Assume que está no diretório correto
-        db_path = os.path.join(current_dir, "scan_history.json")
+        from utils import get_data_path
+        db_path = get_data_path("scan_history.json")
         if os.path.exists(db_path):
             with open(db_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)

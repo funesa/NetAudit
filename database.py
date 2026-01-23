@@ -7,7 +7,9 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from models import Base
 
 # Caminho do banco de dados
-DB_PATH = os.path.join(os.getcwd(), 'netaudit.db')
+# Caminho do banco de dados
+from utils import get_data_path
+DB_PATH = get_data_path('netaudit.db')
 DATABASE_URL = f'sqlite:///{DB_PATH}'
 
 # Criar engine

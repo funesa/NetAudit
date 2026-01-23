@@ -25,7 +25,7 @@ if getattr(sys, 'frozen', False) and hasattr(os, 'add_dll_directory'):
     # Também garante que o diretório atual e o do EXE estejam lá
     os.add_dll_directory(os.path.dirname(sys.executable))
     
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 # Configuração para PyInstaller
 def resource_path(relative_path):
@@ -478,6 +478,14 @@ def check_single_instance():
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    
+    # Migração de dados para pasta persistente (AppData)
+    try:
+        from utils import migrate_legacy_data
+        migrate_legacy_data()
+    except Exception as e:
+        print(f"Erro na migração de dados: {e}")
+        
     check_single_instance()
     app = App()
     app.mainloop()

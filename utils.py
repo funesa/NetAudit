@@ -16,6 +16,81 @@ item_offset = 0
 logger = logging.getLogger('NetAudit')
 
 import sys
+import shutil
+
+# --- PERSISTÊNCIA DE DADOS ---
+APP_NAME = "NetAudit"
+
+def get_data_dir():
+    """
+    Retorna o diretório de dados persistente (%APPDATA%/NetAudit).
+    Cria se não existir.
+    """
+    appdata = os.getenv('APPDATA')
+    if not appdata:
+        # Fallback para home do usuário se APPDATA não existir (raro)
+        appdata = os.path.expanduser("~")
+    
+    data_dir = os.path.join(appdata, APP_NAME)
+    
+    if not os.path.exists(data_dir):
+        try:
+            os.makedirs(data_dir)
+            logger.info(f"Diretório de dados criado: {data_dir}")
+        except Exception as e:
+            logger.error(f"Erro ao criar diretório de dados {data_dir}: {e}")
+            # Fallback para pasta local se falhar gravação no C:
+            return os.getcwd()
+            
+    return data_dir
+
+def get_data_path(filename):
+    """
+    Retorna o caminho absoluto para um arquivo na pasta de dados persistente.
+    """
+    return os.path.join(get_data_dir(), filename)
+
+def migrate_legacy_data():
+    """
+    Move arquivos da pasta local (onde está o exe) para a pasta persistente (AppData).
+    Executado na inicialização.
+    """
+    local_dir = os.getcwd() # Ou os.path.dirname(sys.executable) se frozen
+    if getattr(sys, 'frozen', False):
+        local_dir = os.path.dirname(sys.executable)
+
+    data_dir = get_data_dir()
+    
+    # Se pasta de dados for a mesma da local (dev mode), não faz nada
+    if os.path.normpath(local_dir) == os.path.normpath(data_dir):
+        return
+
+    files_to_migrate = [
+        "netaudit.db",
+        "scan_history.json",
+        "users.json",
+        "general_settings.json",
+        "scan_schedule.json",
+        "ad_config.json",
+        "license.json",
+        "glpi_config.json"
+    ]
+
+    for filename in files_to_migrate:
+        local_path = os.path.join(local_dir, filename)
+        target_path = os.path.join(data_dir, filename)
+        
+        # Só migra se existe no local e NÃO existe (ou é antigo) no destino
+        if os.path.exists(local_path):
+            if not os.path.exists(target_path):
+                try:
+                    shutil.copy2(local_path, target_path)
+                    logger.info(f"Migrado: {filename} -> {target_path}")
+                    # Opcional: remover arquivo local após migração para limpar
+                    # os.remove(local_path) 
+                except Exception as e:
+                    logger.error(f"Erro ao migrar {filename}: {e}")
+
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -407,7 +482,7 @@ class RateLimiter:
 rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
 
 # --- GESTÃO DE CONFIGURAÇÕES GERAIS ---
-SETTINGS_FILE = "general_settings.json"
+SETTINGS_FILE = get_data_path("general_settings.json")
 
 def load_general_settings():
     """Carrega as configurações gerais do sistema (AD, AI, Tickets)"""

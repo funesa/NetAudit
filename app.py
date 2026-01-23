@@ -73,11 +73,11 @@ def inject_version():
 # Lógica para persistência de dados fora do EXE
 # Lógica de diretório removida em favor da configuração acima (AppData)
 
-DB_FILE = "scan_history.json"
-SCHEDULE_FILE = "scan_schedule.json"
-USERS_FILE = "users.json"
-LICENSE_FILE = "license.json"
-GLPI_CONFIG_FILE = "glpi_config.json"
+DB_FILE = utils.get_data_path("scan_history.json")
+SCHEDULE_FILE = utils.get_data_path("scan_schedule.json")
+USERS_FILE = utils.get_data_path("users.json")
+LICENSE_FILE = utils.get_data_path("license.json")
+GLPI_CONFIG_FILE = utils.get_data_path("glpi_config.json")
 
 # Proteção de Credenciais via Variáveis de Ambiente (Hardening)
 from dotenv import load_dotenv
