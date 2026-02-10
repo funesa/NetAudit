@@ -157,6 +157,8 @@ class User(Base):
     password = Column(String(255), nullable=False)  # Hash da senha
     role = Column(String(50), default='admin')
     full_name = Column(String(255))
+    is_active = Column(Boolean, default=True)  # Permite ativar/desativar usuários
+    permissions = Column(JSON, default=lambda: {"view_all": True}) # Permissões granulares
     last_login = Column(DateTime)
     created_at = Column(DateTime, default=datetime.now)
     

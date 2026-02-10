@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-dark-text font-sans antialiased;
+    /* Ethereal Matte - No Gradient */
+    background-image: none;
+  }
+}
+
+@layer components {
+
+  /* Ethereal Card System - Matte & Framed */
+  .ethereal-card {
+    @apply bg-dark-panel border border-dark-border rounded-xl shadow-clean transition-all duration-200;
+  }
+
+  .glass-card {
+    /* Legacy compatibility wrapper mapped to new style */
+    @apply ethereal-card;
+  }
+
+  .glass-card-hover {
+    @apply hover:border-zinc-700 hover:shadow-sm transition-colors;
+  }
+
+  .pill-control {
+    @apply bg-dark-surface p-1 rounded-lg border border-dark-border shadow-clean;
+  }
+
+  .standard-input {
+    @apply bg-dark-input border border-dark-border rounded-lg px-3 py-2 text-[14px] font-normal text-dark-text focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-dark-muted;
+  }
+
+  /* Typography Refinements - Clean & Geometric */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply tracking-tight font-semibold text-dark-text;
+  }
+
+  /* Custom Scrollbar (Minimalist) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors;
+  }
+
+  /* Button Ethereal (Flat & Functional) */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-medium text-[13px] py-2 px-4 rounded-lg shadow-sm active:scale-[0.98] transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-zinc-100 text-zinc-900 border border-zinc-200 font-medium text-[13px] py-2 px-4 rounded-lg shadow-sm active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* Dark Mode Secondary Button override */
+  .dark .btn-secondary {
+    @apply bg-dark-surface hover:bg-zinc-700 text-dark-text border-dark-border;
+  }
+
+  /* Animations - Snappy & Professional */
+  .animate-in {
+    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .slide-in-from-right {
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
+}
+
+.progress-bar-shrink {
+  animation-name: progressShrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  will-change: width;
+}
+
+
+/* Autofill Fix for Dark Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #18181b inset !important;
+  -webkit-text-fill-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+}

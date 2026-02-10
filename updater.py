@@ -8,20 +8,20 @@ import hashlib
 # 🔧 CONFIGURAÇÃO DE ATUALIZAÇÃO REMOTA
 # ============================================
 # INSTRUÇÕES:
-# 1. Hospede o arquivo version.json na internet (GitHub, Google Drive, seu servidor)
+# 1. Hospede o arquivo version.json no servidor local (172.23.51.50:8080)
 # 2. O version.json deve conter: latest_version, download_url, sha256
 # 3. Recompile o executável: pyinstaller build.spec
 #
 # EXEMPLO version.json:
 # {
 #   "latest_version": "2.0.0",
-#   "download_url": "https://github.com/funesa/NetAudit/releases/download/v2.0.0/NetAudit.exe",
+#   "download_url": "http://172.23.51.50:8080/updates/releases/NetAudit-Setup.exe",
 #   "sha256": "abc123...",
 #   "release_notes": "Correções de estabilidade"
 # }
 # ============================================
 
-UPDATE_URL = "https://raw.githubusercontent.com/funesa/NetAudit/master/version.json"
+UPDATE_URL = "http://172.23.51.50:8080/updates/version.json"
 
 def check_for_updates(current_version):
     """

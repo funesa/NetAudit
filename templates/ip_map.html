@@ -399,8 +399,31 @@
             <button class="btn-suggest" onclick="suggestIP()" style="height: 48px; border-radius: 9999px;">
                 <i class="ph-bold ph-lightbulb"></i> Sugerir IP
             </button>
+
+            <button onclick="testAPI()"
+                style="height: 48px; border-radius: 9999px; padding: 0 20px; background: #10b981; color: white; border: none; cursor: pointer;">
+                <i class="ph-bold ph-flask"></i> Teste Direto
+            </button>
+
+            <button onclick="toggleDebugPanel()"
+                style="height: 48px; border-radius: 9999px; padding: 0 20px; background: #374151; color: white; border: none; cursor: pointer;">
+                <i class="ph-bold ph-bug"></i> Debug
+            </button>
         </div>
     </div>
+</div>
+
+<!-- Debug Panel -->
+<div id="debugPanel"
+    style="display: none; background: #1f2937; color: #10b981; padding: 20px; border-radius: 12px; margin-bottom: 20px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; border: 2px solid #10b981;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <strong style="color: #10b981; font-size: 14px;">🐛 PAINEL DE DEBUG</strong>
+        <button onclick="clearDebugLog()"
+            style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">
+            Limpar
+        </button>
+    </div>
+    <div id="debugLog" style="white-space: pre-wrap; word-wrap: break-word;"></div>
 </div>
 
 <!-- Main Panel -->
@@ -526,55 +549,165 @@
         document.getElementById('statOnline').textContent = stats.online;
     }
 
-    async function suggestIP() {
-        const subnet = document.getElementById('subnetInput').value;
-        const days = document.getElementById('daysThreshold').value;
+    // Debug Panel Functions
+    function toggleDebugPanel() {
+        const panel = document.getElementById('debugPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function clearDebugLog() {
+        document.getElementById('debugLog').innerHTML = '';
+    }
+
+    function debugLog(message, type = 'info') {
+        const logDiv = document.getElementById('debugLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const colors = {
+            'info': '#10b981',
+            'warn': '#f59e0b',
+            'error': '#ef4444',
+            'success': '#22c55e'
+        };
+        const color = colors[type] || colors['info'];
+
+        logDiv.innerHTML += `<div style="color: ${color}; margin-bottom: 5px;">[${timestamp}] ${message}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+
+        // Também logar no console
+        console.log(message);
+    }
+
+    // Função de teste simples
+    async function testAPI() {
+        alert('🧪 Iniciando teste da API...');
 
         try {
-            const res = await fetch(`/api/ip-map/suggest?subnet=${encodeURIComponent(subnet)}&days=${days}`);
-            const suggestion = await res.json();
+            const url = '/api/ip-map/suggest?days=7';
+            debugLog('🧪 TESTE: Chamando ' + url, 'info');
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            debugLog('🧪 TESTE: Resposta recebida', 'success');
+            debugLog(JSON.stringify(data, null, 2), 'info');
+
+            if (data.error) {
+                alert('❌ Erro: ' + data.error + '\n\n' + (data.message || ''));
+            } else if (data.ip) {
+                alert('✅ Sucesso!\n\nIP Sugerido: ' + data.ip + '\nStatus: ' + data.status);
+            } else {
+                alert('⚠️ Resposta inesperada:\n\n' + JSON.stringify(data, null, 2));
+            }
+        } catch (e) {
+            debugLog('🧪 TESTE: ERRO - ' + e.message, 'error');
+            alert('❌ Erro no teste:\n\n' + e.message);
+        }
+    }
+
+    async function suggestIP() {
+        debugLog('================================================================================');
+        debugLog('🔍 INICIANDO SUGESTÃO DE IP', 'info');
+        debugLog('================================================================================');
+
+        const subnetInput = document.getElementById('subnetInput').value.trim();
+        const days = document.getElementById('daysThreshold').value;
+
+        debugLog('📋 Parâmetros:');
+        debugLog('  - Subnet: ' + (subnetInput || '(vazio - auto-detectar)'), 'info');
+        debugLog('  - Dias sem uso: ' + days, 'info');
+
+        try {
+            // Construir URL
+            let url = '/api/ip-map/suggest?days=' + days;
+            if (subnetInput) {
+                url += '&subnet=' + encodeURIComponent(subnetInput);
+            }
+
+            debugLog('🌐 URL: ' + url, 'info');
+            debugLog('⏳ Enviando requisição...', 'info');
+
+            const res = await fetch(url);
+
+            const statusMsg = '📡 Status: ' + res.status + ' ' + res.statusText;
+            debugLog(statusMsg, res.status === 200 ? 'success' : 'warn');
+
+            const responseText = await res.text();
+            debugLog('📄 Resposta (' + responseText.length + ' bytes)', 'info');
+
+            let suggestion;
+            try {
+                suggestion = JSON.parse(responseText);
+                debugLog('✅ JSON parseado OK', 'success');
+            } catch (parseError) {
+                debugLog('❌ ERRO ao parsear JSON: ' + parseError.message, 'error');
+                debugLog('Resposta: ' + responseText.substring(0, 200), 'error');
+                alert('❌ Erro: Resposta inválida do servidor\n\nResposta: ' + responseText.substring(0, 200));
+                return;
+            }
 
             if (suggestion.error) {
-                alert(suggestion.error);
+                debugLog('⚠️ API retornou erro: ' + suggestion.error, 'error');
+                debugLog('   Mensagem: ' + suggestion.message, 'error');
+
+                if (suggestion.traceback) {
+                    debugLog('📋 Traceback: ' + suggestion.traceback, 'error');
+                }
+
+                const message = suggestion.message || suggestion.error;
+                let errorMsg = '❌ ' + suggestion.error + '\n\n' + message;
+
+                if (suggestion.traceback) {
+                    errorMsg += '\n\n⚠️ Veja o painel de Debug para detalhes técnicos';
+                }
+
+                alert(errorMsg);
             } else {
+                debugLog('✅ IP SUGERIDO: ' + suggestion.ip, 'success');
+                debugLog('   Status: ' + suggestion.status, 'success');
+                debugLog('   Hostname: ' + (suggestion.hostname || 'N/A'), 'success');
+
                 showIPDetails(suggestion);
 
                 // Destacar na grid
-                document.querySelectorAll('.ip-cell').forEach(cell => {
-                    if (cell.textContent === suggestion.ip.split('.').slice(-1)[0]) {
+                const lastOctet = suggestion.ip.split('.').slice(-1)[0];
+                document.querySelectorAll('.ip-cell').forEach(function (cell) {
+                    if (cell.textContent === lastOctet) {
                         cell.classList.add('selected');
                         cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 });
 
-                alert(`IP Sugerido: ${suggestion.ip}\n\nEste IP está livre e pode ser usado!`);
+                alert('✅ IP Sugerido: ' + suggestion.ip + '\n\nEste IP está livre e pode ser usado!');
             }
         } catch (e) {
-            console.error(e);
-            alert('Erro ao sugerir IP');
+            debugLog('💥 ERRO CRÍTICO: ' + e.name, 'error');
+            debugLog('   Mensagem: ' + e.message, 'error');
+            debugLog('   Stack: ' + e.stack, 'error');
+            alert('❌ Erro ao sugerir IP\n\nDetalhes: ' + e.message + '\n\nClique no botão Debug para ver mais informações.');
         }
+
+        debugLog('================================================================================');
+        debugLog('🏁 FIM', 'info');
+        debugLog('================================================================================');
     }
 
     // Auto-refresh functionality
-    let autoRefreshTimer = null;
+    const enabled = document.getElementById('autoRefreshEnabled').checked;
+    const interval = parseInt(document.getElementById('refreshInterval').value);
+    const unit = document.getElementById('refreshUnit').value;
 
-    function toggleAutoRefresh() {
-        const enabled = document.getElementById('autoRefreshEnabled').checked;
-        const interval = parseInt(document.getElementById('refreshInterval').value);
-        const unit = document.getElementById('refreshUnit').value;
+    // Save to localStorage
+    localStorage.setItem('ipMapAutoRefresh', JSON.stringify({
+        enabled: enabled,
+        interval: interval,
+        unit: unit
+    }));
 
-        // Save to localStorage
-        localStorage.setItem('ipMapAutoRefresh', JSON.stringify({
-            enabled: enabled,
-            interval: interval,
-            unit: unit
-        }));
-
-        if (enabled) {
-            startAutoRefresh();
-        } else {
-            stopAutoRefresh();
-        }
+    if (enabled) {
+        startAutoRefresh();
+    } else {
+        stopAutoRefresh();
+    }
     }
 
     function startAutoRefresh() {
@@ -608,7 +741,21 @@
     }
 
     // Load saved settings on page load
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
+        // Detectar e preencher subnet automaticamente
+        try {
+            const res = await fetch('/api/ip-map?days=7');
+            const data = await res.json();
+
+            if (data.stats && data.stats.subnet) {
+                document.getElementById('subnetInput').value = data.stats.subnet;
+                console.log('Subnet auto-preenchida:', data.stats.subnet);
+            }
+        } catch (e) {
+            console.error('Erro ao detectar subnet:', e);
+        }
+
+        // Carregar mapa de IPs
         loadIPMap();
 
         // Load saved auto-refresh settings
@@ -641,5 +788,6 @@
             }
         });
     });
+
 </script>
 {% endblock %}

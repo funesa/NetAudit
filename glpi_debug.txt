@@ -1,0 +1,220 @@
+[2026-02-04 11:18:10] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:18:10] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:18:11] init_session: Sucesso!
+[2026-02-04 11:27:20] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:27:20] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:27:21] init_session: Sucesso!
+[2026-02-04 11:30:44] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:30:44] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:30:45] init_session: Sucesso!
+[2026-02-04 11:44:05] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:44:05] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:44:06] init_session: Sucesso!
+[2026-02-04 11:46:09] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:46:09] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:46:10] init_session: Sucesso!
+[2026-02-04 11:48:26] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:48:26] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:48:26] init_session: Sucesso!
+[2026-02-04 11:53:04] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:53:04] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:53:04] init_session: Sucesso!
+[2026-02-04 11:56:49] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:56:49] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:56:49] init_session: Sucesso!
+[2026-02-04 11:57:27] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 11:57:27] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 11:57:28] init_session: Sucesso!
+[2026-02-04 12:00:24] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:00:24] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:00:24] init_session: Sucesso!
+[2026-02-04 12:08:19] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:08:19] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:08:20] init_session: Sucesso!
+[2026-02-04 12:15:49] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:15:49] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:15:49] init_session: Sucesso!
+[2026-02-04 12:21:25] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:21:25] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:21:26] init_session: Sucesso!
+[2026-02-04 12:32:15] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:32:15] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:32:16] init_session: Sucesso!
+[2026-02-04 12:37:07] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 12:37:07] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 12:37:09] init_session: Sucesso!
+[2026-02-04 13:07:32] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 13:07:32] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 13:07:33] init_session: Sucesso!
+[2026-02-04 13:41:08] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 13:41:08] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 13:41:09] init_session: Sucesso!
+[2026-02-04 14:11:20] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 14:11:20] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 14:11:21] init_session: Sucesso!
+[2026-02-04 15:14:11] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 15:14:11] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 15:14:11] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 15:14:11] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 15:14:11] init_session: Sucesso!
+[2026-02-04 15:14:11] init_session: Sucesso!
+[2026-02-04 15:44:27] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 15:44:27] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 15:44:27] init_session: Sucesso!
+[2026-02-04 16:14:48] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 16:14:48] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 16:14:49] init_session: Sucesso!
+[2026-02-04 16:44:57] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-04 16:44:57] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-04 16:44:57] init_session: Sucesso!
+[2026-02-05 13:23:01] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 13:23:01] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 13:23:01] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 13:23:01] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 13:23:02] init_session: Sucesso!
+[2026-02-05 13:23:02] init_session: Sucesso!
+[2026-02-05 13:32:50] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 13:32:50] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 13:32:50] init_session: Sucesso!
+[2026-02-05 14:03:12] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 14:03:12] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 14:03:12] init_session: Sucesso!
+[2026-02-05 14:33:34] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 14:33:34] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 14:33:35] init_session: Sucesso!
+[2026-02-05 15:03:52] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 15:03:52] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 15:03:53] init_session: Sucesso!
+[2026-02-05 15:34:12] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 15:34:12] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 15:34:13] init_session: Sucesso!
+[2026-02-05 17:13:26] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 17:13:26] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 17:13:27] init_session: Sucesso!
+[2026-02-05 19:53:36] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 19:53:36] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 19:53:36] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-05 19:53:36] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-05 19:53:37] init_session: Sucesso!
+[2026-02-05 19:53:37] init_session: Sucesso!
+[2026-02-06 13:50:44] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 13:50:44] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 13:50:44] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 13:50:44] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 13:50:45] init_session: Sucesso!
+[2026-02-06 13:50:45] init_session: Sucesso!
+[2026-02-06 13:57:42] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 13:57:42] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 13:57:43] init_session: Sucesso!
+[2026-02-06 14:17:48] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 14:17:48] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 14:17:48] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 14:17:48] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 14:17:48] init_session: Sucesso!
+[2026-02-06 14:17:48] init_session: Sucesso!
+[2026-02-06 14:47:54] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 14:47:54] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 14:47:55] init_session: Sucesso!
+[2026-02-06 15:11:59] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 15:11:59] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 15:11:59] init_session: Sucesso!
+[2026-02-06 15:46:18] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 15:46:18] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 15:46:19] init_session: Sucesso!
+[2026-02-06 16:16:32] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 16:16:32] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 16:16:33] init_session: Sucesso!
+[2026-02-06 17:15:35] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 17:15:35] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 17:15:35] init_session: Sucesso!
+[2026-02-06 21:00:25] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 21:00:25] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 21:00:26] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-06 21:00:26] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-06 21:00:27] init_session: Sucesso!
+[2026-02-06 21:00:27] init_session: Sucesso!
+[2026-02-09 10:31:55] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 10:31:55] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 10:31:55] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 10:31:56] init_session: Sucesso!
+[2026-02-09 10:31:56] init_session: Sucesso!
+[2026-02-09 13:07:57] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 13:07:57] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 13:07:58] init_session: Sucesso!
+[2026-02-09 13:47:28] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 13:47:28] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 13:47:28] init_session: Sucesso!
+[2026-02-09 14:45:43] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 14:45:43] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 14:45:44] init_session: Sucesso!
+[2026-02-09 15:29:23] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 15:29:23] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 15:29:24] init_session: Sucesso!
+[2026-02-09 16:50:18] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 16:50:18] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 16:50:19] init_session: Sucesso!
+[2026-02-09 16:54:40] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 16:54:40] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 16:54:41] init_session: Sucesso!
+[2026-02-09 17:00:34] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:00:34] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:00:35] init_session: Sucesso!
+[2026-02-09 17:04:35] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:04:35] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:04:35] init_session: Sucesso!
+[2026-02-09 17:05:26] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:05:26] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:05:26] init_session: Sucesso!
+[2026-02-09 17:07:08] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:07:08] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:07:08] init_session: Sucesso!
+[2026-02-09 17:09:47] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:09:47] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:09:48] init_session: Sucesso!
+[2026-02-09 17:13:38] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:13:38] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:13:39] init_session: Sucesso!
+[2026-02-09 17:15:23] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:15:23] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:15:24] init_session: Sucesso!
+[2026-02-09 17:18:00] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-09 17:18:00] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-09 17:18:00] init_session: Sucesso!
+[2026-02-10 13:32:42] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 13:32:42] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 13:32:42] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 13:32:43] init_session: Sucesso!
+[2026-02-10 13:32:43] init_session: Sucesso!
+[2026-02-10 14:03:04] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 14:03:04] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 14:03:04] init_session: Sucesso!
+[2026-02-10 14:33:21] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 14:33:21] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 14:33:22] init_session: Sucesso!
+[2026-02-10 15:03:46] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 15:03:46] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 15:03:47] init_session: Sucesso!
+[2026-02-10 15:34:03] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 15:34:03] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 15:34:03] init_session: Sucesso!
+[2026-02-10 15:52:58] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 15:52:58] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 15:52:59] init_session: Sucesso!
+[2026-02-10 15:59:48] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 15:59:48] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 15:59:49] init_session: Sucesso!
+[2026-02-10 16:03:00] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 16:03:00] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 16:03:01] init_session: Sucesso!
+[2026-02-10 16:06:16] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 16:06:16] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 16:06:17] init_session: Sucesso!
+[2026-02-10 16:08:04] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 16:08:04] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 16:08:05] init_session: Sucesso!
+[2026-02-10 16:38:22] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 16:38:22] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 16:38:23] init_session: Sucesso!
+[2026-02-10 17:08:54] get_session: Iniciando nova sessão para pofjunior em https://helpdesk.funesa.se.gov.br
+[2026-02-10 17:08:54] init_session: Tentando conectar em https://helpdesk.funesa.se.gov.br/apirest.php/initSession (Auth: Basic)
+[2026-02-10 17:08:55] init_session: Sucesso!

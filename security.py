@@ -2,8 +2,10 @@ from cryptography.fernet import Fernet
 import os
 import json
 import base64
+import secrets
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from utils import get_data_path, logger
 
 # Chave fixa derivada para garantir que os dados possam ser lidos em qualquer reinício
 # Em produção real, isso deveria vir de variável de ambiente ou cofre seguro.
@@ -78,3 +80,35 @@ def load_encrypted_json(filepath, fields_to_decrypt, default=None):
         return data
     except:
         return default or []
+
+def get_flask_secret_key():
+    """
+    Retorna uma chave secreta única para o Flask.
+    Gera e salva no AppData se não existir.
+    """
+    secret_path = get_data_path(".flask_secret")
+    
+    if os.path.exists(secret_path):
+        try:
+            with open(secret_path, 'r') as f:
+                key = f.read().strip()
+                if key: return key
+        except: pass
+        
+    # Gera nova chave segura
+    new_key = secrets.token_hex(32)
+    try:
+        with open(secret_path, 'w') as f:
+            f.write(new_key)
+        # Tenta restringir permissões no Windows (ReadOnly para o usuário)
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetFileAttributesW(secret_path, 0x01) # READONLY
+        except: pass
+        
+        logger.info("Nova chave secreta do Flask gerada e protegida.")
+    except Exception as e:
+        logger.error(f"Erro ao salvar secret key: {e}")
+        return "netaudit-fallback-secret-2026"
+        
+    return new_key

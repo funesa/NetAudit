@@ -65,58 +65,70 @@ def get_active_alerts():
 
 @metrics_bp.route('/api/metrics/history', methods=['GET'])
 def get_metrics_history():
-    """Retorna histórico de métricas agregadas para gráficos (global ou por device)"""
-    session = get_session()
+    """Retorna histórico de métricas agregadas via Raw SQL para performance máxima"""
+    import sqlite3
+    from database import DB_PATH
+    
     try:
-        device_id = request.args.get('device_id', type=int)
         hours = request.args.get('hours', 24, type=int)
+        since = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
         
-        since = datetime.now() - timedelta(hours=hours)
+        # Conexão direta veloz
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA busy_timeout = 5000")
+        cursor = conn.cursor()
         
-        query = session.query(Metric).filter(Metric.timestamp >= since)
-        if device_id:
-            query = query.filter(Metric.device_id == device_id)
-            
-        metrics = query.order_by(Metric.timestamp).all()
+        # Query otimizada usando o novo índice
+        # Agrupamos por data/hora para o gráfico global
+        sql = """
+            SELECT 
+                strftime('%Y-%m-%d %H:00', timestamp) as hour_bucket,
+                metric_type,
+                AVG(value)
+            FROM metrics
+            WHERE timestamp >= ? 
+              AND (metric_type = 'cpu_usage' OR metric_type = 'ram_usage' OR metric_type LIKE 'disk_usage%')
+            GROUP BY hour_bucket, metric_type
+            ORDER BY hour_bucket ASC
+        """
+        cursor.execute(sql, (since,))
+        rows = cursor.fetchall()
+        conn.close()
         
-        # Agrupar dados por tipo e hora
-        history = {
-            'labels': [],
-            'cpu': [],
-            'ram': [],
-            'disk': []
-        }
-        
-        # Gerar buckets de hora
+        # Estrutura para o Recharts
+        # { '2023-01-01 10:00': { time: '10:00', cpu: 0, ram: 0, disk: 0 } }
         buckets = {}
-        for h in range(hours + 1):
-            dt = (datetime.now() - timedelta(hours=h)).replace(minute=0, second=0, microsecond=0)
-            buckets[dt.isoformat()] = {'cpu': [], 'ram': [], 'disk': []}
+        for hour_bucket, m_type, m_val in rows:
+            display_time = hour_bucket.split(' ')[1] # Pega apenas o HH:00
             
-        for m in metrics:
-            bucket_key = m.timestamp.replace(minute=0, second=0, microsecond=0).isoformat()
-            if bucket_key in buckets:
-                m_type = 'cpu' if 'cpu' in m.metric_type else 'ram' if 'ram' in m.metric_type else 'disk' if 'disk' in m.metric_type else None
-                if m_type:
-                    buckets[bucket_key][m_type].append(m.value)
-        
-        # Converter buckets em listas ordenadas
+            if hour_bucket not in buckets:
+                buckets[hour_bucket] = {'time': display_time, 'cpu': 0, 'ram': 0, 'disk': 0}
+            
+            val = round(m_val, 1)
+            if m_type == 'cpu_usage':
+                buckets[hour_bucket]['cpu'] = val
+            elif m_type == 'ram_usage':
+                buckets[hour_bucket]['ram'] = val
+            elif m_type.startswith('disk_usage'):
+                # Média entre diferentes discos/partições para o gráfico global
+                if buckets[hour_bucket]['disk'] == 0:
+                    buckets[hour_bucket]['disk'] = val
+                else:
+                    buckets[hour_bucket]['disk'] = round((buckets[hour_bucket]['disk'] + val) / 2, 1)
+
+        # Converter para lista ordenada
         sorted_keys = sorted(buckets.keys())
-        for key in sorted_keys:
-            history['labels'].append(datetime.fromisoformat(key).strftime('%H:00'))
-            
-            # Média das métricas no bucket
-            vals = buckets[key]
-            history['cpu'].append(round(sum(vals['cpu']) / len(vals['cpu']), 1) if vals['cpu'] else 0)
-            history['ram'].append(round(sum(vals['ram']) / len(vals['ram']), 1) if vals['ram'] else 0)
-            history['disk'].append(round(sum(vals['disk']) / len(vals['disk']), 1) if vals['disk'] else 0)
-            
-        return jsonify(history)
+        sorted_data = [buckets[k] for k in sorted_keys]
+        
+        if not sorted_data:
+            print(f"DEBUG: No metrics found in range {since}")
+        
+        return jsonify({'success': True, 'data': sorted_data})
         
     except Exception as e:
+        import traceback
+        print(f"DEBUG ERROR metrics_history: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)})
-    finally:
-        session.close()
 
 @metrics_bp.route('/api/monitoring/processes', methods=['GET'])
 def get_device_processes():

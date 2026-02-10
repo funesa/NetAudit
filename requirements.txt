@@ -1,12 +1,40 @@
-flask
-flask-session
-requests
-ldap3
-urllib3
-gunicorn
-python-dotenv
-pandas
-sqlalchemy
-alembic
-APScheduler
-psutil
+# ===== Core Web Framework =====
+Flask==3.0.3                    # Web framework principal
+Flask-Session==0.8.0            # Gerenciamento de sessões
+Flask-Cors==4.0.0               # Suporte a CORS para o frontend React
+Werkzeug==3.0.3                 # WSGI utilities (vem com Flask)
+
+# ===== HTTP & Networking =====
+requests==2.32.3                # HTTP client
+urllib3==2.2.2                  # HTTP library (usado pelo requests)
+
+# ===== Active Directory / LDAP =====
+ldap3==2.9.1                    # Cliente LDAP para integração com AD
+
+# ===== Database =====
+SQLAlchemy==2.0.31              # ORM para banco de dados
+alembic==1.13.2                 # Migrations de banco de dados
+
+# ===== Task Scheduling =====
+APScheduler==3.10.4             # Agendamento de tarefas
+
+# ===== System Monitoring =====
+psutil==6.0.0                   # Informações do sistema e processos
+
+# ===== Data Processing =====
+pandas==2.2.2                   # Análise e manipulação de dados
+
+# ===== Production Server =====
+gunicorn==22.0.0                # WSGI HTTP Server (Linux/Mac)
+waitress==3.0.0                 # WSGI Server (Windows-friendly)
+
+# ===== Environment & Configuration =====
+python-dotenv==1.0.1            # Carregamento de variáveis de ambiente
+
+# ===== Security & Cryptography =====
+cryptography==42.0.8            # Criptografia (usado para senhas)
+
+# ===== Additional Utilities =====
+# ===== Intelligence & NLP =====
+thefuzz==0.22.1                  # Fuzzy string matching
+python-Levenshtein==0.27.3       # Aceleração para fuzzy matching

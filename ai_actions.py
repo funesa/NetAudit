@@ -1,9 +1,16 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 import re
 import json
 import os
-import difflib
-from ad_helper import reset_ad_password, unlock_user_account, toggle_user_status, get_ad_users
+import unicodedata
+from ad_helper import reset_ad_password, toggle_user_status, get_ad_users
+from glpi_helper import add_ticket_solution, update_ticket
+from license_manager import lic_manager
+from core.decorators import login_required
+from blueprints.ai.intents import INTENTS, find_users_fuzzy, find_assets_fuzzy, is_admin_account
+from blueprints.ai.utils import format_user_card, format_asset_card, ping_ip, load_scan_data
+from blueprints.ai.reports import generate_report_logic
+from blueprints.ai.tickets import analyze_ticket_for_action, get_ai_intelligence_logic, is_reset_ticket
 
 def get_settings():
     try:
@@ -14,571 +21,232 @@ def get_settings():
 
 ai_bp = Blueprint('ai_actions', __name__)
 
-def load_scan_data():
-    """Carrega o histórico de ativos escaneados (scan_history.json)"""
-    try:
-        from utils import get_data_path
-        db_path = get_data_path("scan_history.json")
-        if os.path.exists(db_path):
-            with open(db_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else list(data.values())
-    except Exception as e:
-        print(f"Erro ao carregar scan DB: {e}")
-    return []
-
-def find_assets_fuzzy(term):
-    """Busca ativos por Hostname, IP ou Usuário logado"""
-    assets = load_scan_data()
-    term = term.lower()
-    matches = []
-    
-    for a in assets:
-        # Extrai campos principais
-        ip = str(a.get('ip', '')).lower()
-        host = str(a.get('hostname', '')).lower()
-        user = str(a.get('user', '')).lower()
-        
-        # 1. Match exato de IP (Prioridade)
-        if ip == term:
-            return [a]
-        
-        # 2. Match parcial em Hostname ou User
-        if (term in host) or (term in user) or (term in ip):
-            matches.append(a)
-            
-    return matches
-
-def find_users_fuzzy(search_term):
-    """
-    Busca usuários no AD (cache) que correspondam ao termo de busca.
-    Retorna lista de dicionários com {username, name, email}.
-    """
-    all_users = get_ad_users() # Retorna dicts
-    search_term = search_term.lower()
-    
-    matches = []
-    
-    # Debug: Print keys to confirm structure if needed
-    # if all_users: print(f"DEBUG JS KEYS: {all_users[0].keys()}")
-
-    for u in all_users:
-        # Normalização de chaves para evitar case sensitivity
-        u_lower = {k.lower(): v for k, v in u.items()}
-        
-        # Extração usando as chaves corretas definidas em get_ad_users.ps1
-        # O script PS retorna: username, displayName, email, description, etc.
-        sam = str(u_lower.get('username', '')).strip()
-        display = str(u_lower.get('displayname', '')).strip()
-        email = str(u_lower.get('email', '')).strip() # Script usa 'email', não 'emailaddress'
-        
-        # Limpeza de "N/A" que o script PS pode retornar
-        if sam == "N/A": sam = ""
-        if display == "N/A": display = ""
-        if email == "N/A": email = ""
-
-        # Definição do Nome de Exibição 
-        final_name = display if display else sam
-        
-        # Objeto normalizado para retorno consistente no backend
-        clean_user = {
-            'SamAccountName': sam,
-            'DisplayName': final_name,
-            'EmailAddress': email,
-            'Description': str(u_lower.get('description', ''))
-        }
-        
-        sam_lower = sam.lower()
-        final_name_lower = final_name.lower()
-        search_lower = search_term.lower()
-        
-        # Validação essencial
-        if not sam: continue
-
-        # 1. Match Exato de Username (Prioridade Máxima)
-        if sam_lower == search_lower:
-             return [clean_user] 
-            
-        # 2. Match Parcial (Username ou Nome Completo)
-        if (search_lower in sam_lower) or (search_lower in final_name_lower):
-            matches.append(clean_user)
-            
-    return matches
-
-def format_user_display(u):
-    return f"{u.get('DisplayName', 'N/A')} ({u.get('SamAccountName')})"
-
-def format_asset_card(asset):
-    """Gera HTML rico para exibir detalhes de um ativo"""
-    icon = asset.get('icon', 'ph-desktop')
-    vendor = asset.get('vendor', 'Genérico')
-    status_color = "#10b981" if asset.get('status_code', 'ONLINE') == 'ONLINE' else "#ef4444"
-    
-    return f"""
-    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-        <div style="width: 50px; height: 50px; background: rgba(59, 130, 246, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.5rem;">
-            <i class="ph-fill {icon}"></i>
-        </div>
-        <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 style="margin: 0; color: white; font-size: 1rem;">{asset.get('hostname', 'Unknown')}</h4>
-                <span style="font-size: 0.75rem; background: {status_color}20; color: {status_color}; padding: 2px 8px; border-radius: 99px;">{asset.get('ip')}</span>
-            </div>
-            <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">
-                {asset.get('os_detail', 'OS Desconhecido')} • {asset.get('user', 'Sem usuário')}
-            </div>
-             <div style="color: #64748b; font-size: 0.75rem; margin-top: 2px;">
-                {vendor} • {asset.get('model', 'N/A')}
-            </div>
-        </div>
-    </div>
-    """
-
-def ping_ip(ip):
-    """Verifica se um IP responde a ping (1 pacote, timeout curto)"""
-    import subprocess, platform
-    try:
-        param_n = '-n' if platform.system().lower() == 'windows' else '-c'
-        param_w = '-w' if platform.system().lower() == 'windows' else '-W'
-        # Timeout 500ms (so não demorar muito na UI)
-        command = ['ping', param_n, '1', param_w, '500', ip]
-        creationflags = 0x08000000 if platform.system().lower() == 'windows' else 0
-        return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags) == 0
-    except:
-        return False
-
-
-def suggest_free_ips(count=1):
-    """ Encontra um ou mais IPs livres na sub-rede principal (baseado no histórico) """
-    assets = load_scan_data()
-    if not assets: return []
-    
-    # 1. Infere a sub-rede mais comum (ex: 172.23.51)
-    from collections import Counter
-    subnets = []
-    used_host_parts = set() # Apenas o ultimo octeto
-    
-    base_subnet = ""
-    
-    for a in assets:
-        ip = a.get('ip')
-        if ip and '.' in ip:
-            parts = ip.split('.')
-            if len(parts) == 4:
-                subnet = ".".join(parts[:3])
-                subnets.append(subnet)
-                if subnet == base_subnet or not base_subnet:
-                     used_host_parts.add(int(parts[3]))
-    
-    if subnets:
-        base_subnet = Counter(subnets).most_common(1)[0][0]
-        # Recalcula used hosts apenas para a subnet vencedora
-        used_host_parts = set()
-        for a in assets:
-             ip = a.get('ip')
-             if ip and ip.startswith(base_subnet):
-                 parts = ip.split('.')
-                 used_host_parts.add(int(parts[3]))
-    else:
-        return [] # Sem dados para inferir
-        
-    # 2. Procura slots livres
-    import random
-    candidates = list(range(20, 254)) 
-    random.shuffle(candidates) # Embaralha para variar a sugestão
-    
-    found_ips = []
-    for host_num in candidates:
-        if len(found_ips) >= count:
-            break
-            
-        if host_num in used_host_parts:
-            continue # Já existe no banco de dados como ativo
-            
-        candidate_ip = f"{base_subnet}.{host_num}"
-        
-        # 3. Valida com Ping (Realtime Check)
-        if not ping_ip(candidate_ip):
-            found_ips.append(candidate_ip)
-            
-    return found_ips
-
-def suggest_free_ip():
-    """ Versão simplificada para manter compatibilidade reversa """
-    ips = suggest_free_ips(1)
-    return ips[0] if ips else None
-
-from license_manager import lic_manager
+@ai_bp.route('/api/ai/cancel', methods=['POST'])
+@login_required
+def cancel_context():
+    session.pop('ai_context', None)
+    return jsonify({'success': True})
 
 @ai_bp.route('/api/ai/process', methods=['POST'])
+@login_required
 def process_command():
-    # 1. Licença Check
-    if not lic_manager.has_pro_access():
-         return jsonify({
-            'intent': 'error',
-            'description': 'A Atena IA é um recurso Premium. O seu trial expirou ou você não possui uma licença ativa.',
-            'params': {}
-        }), 403
-
-    # Check if AI is enabled in general settings
-    try:
-        from utils import safe_json_load
-        settings = safe_json_load("general_settings.json", default={"ai_enabled": True})
-        if not settings.get("ai_enabled", True):
-            return jsonify({
-                'intent': 'error',
-                'description': 'A Atena IA está desativada no momento. Reative-a nas Configurações do Sistema.',
-                'params': {}
-            }), 403
-    except:
-        pass
-
-    data = request.json
-    command = data.get('command', '').lower()
-
-    # --- IP AVAILABILITY CHECK (Specific IP) ---
-    # "o ip 10.0.0.1 está livre?", "ip 10.0.0.1 disponivel"
-    check_match = re.search(r'(?:o\s+)?ip\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(?:est[áa]|t[áa]|é)?\s*(?:livre|dispon[íi]vel|vago|usado|ocupado)', command)
-    
-    if check_match:
-        target_ip = check_match.group(1)
-        
-        # 1. Verifica no Histórico
-        known_assets = find_assets_fuzzy(target_ip)
-        is_known = len(known_assets) > 0
-        known_asset_online = is_known and known_assets[0].get('status_code') == 'ONLINE'
-        
-        # 2. Verificação em Tempo Real (Ping)
-        is_responding = ping_ip(target_ip)
-        
-        if is_responding:
-            # Caso 1: Responde Ping = OCUPADO
-            status_text = "OCUPADO"
-            color = "#ef4444" 
-            icon = "ph-prohibit"
-            
-            detail_html = ""
-            if is_known:
-                asset = known_assets[0]
-                detail_html = f"""
-                <div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px;">
-                     <strong>Identificado como:</strong> {asset.get('hostname')} ({asset.get('vendor')})
-                     <br><small>Usuário: {asset.get('user')}</small>
-                </div>
-                """
-            else:
-                 detail_html = "<div style='margin-top:10px; font-size:0.9em; color:#9ca3af;'>Dispositivo desconhecido, mas responde ao Ping.</div>"
-
-            html = f"""
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <div style="background:{color}20; color:{color}; padding:8px; border-radius:50%;"><i class="ph-fill {icon} size-lg"></i></div>
-                <div>
-                    <h4 style="margin:0; color:{color};">IP {target_ip} em uso</h4>
-                </div>
-            </div>
-            {detail_html}
-            """
-            
-            return jsonify({
-                'intent': 'show_info',
-                'description': html,
-                'params': {}
-            })
-            
-        elif is_known and known_asset_online:
-             # Caso 2: Não pinga agora, mas consta ONLINE no banco recente
-             html = f"""
-             <h4 style="color:#f59e0b; margin:0 0 10px 0;">🚫 IP Possivelmente em Uso</h4>
-             <p>O IP <strong>{target_ip}</strong> não respondeu ao ping agora, mas consta como <strong>ONLINE</strong> no último scan do sistema.</p>
-             {format_asset_card(known_assets[0])}
-             """
-             return jsonify({'intent': 'show_info', 'description': html, 'params': {}})
-             
-        else:
-            # Caso 3: LIVRE
-            html = f"""
-            <div style="text-align:center; padding:15px;">
-                <div style="display:inline-flex; background:rgba(16, 185, 129, 0.2); color:#34d399; padding:15px; border-radius:50%; margin-bottom:10px;">
-                    <i class="ph-fill ph-check-circle" style="font-size:2rem;"></i>
-                </div>
-                <h3 style="color:#34d399; margin:5px 0;">IP Disponível</h3>
-                <p style="color:#cbd5e1; margin-top:5px;">O IP <strong>{target_ip}</strong> parece estar livre.</p>
-                <div style="text-align:left; font-size:0.85rem; color:#94a3b8; margin-top:15px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">
-                    <div style="margin-bottom:4px"><i class="ph-bold ph-check" style="color:#34d399; margin-right:6px;"></i> Sem resposta de Ping</div>
-                    <div><i class="ph-bold ph-check" style="color:#34d399; margin-right:6px;"></i> Não consta no scanner</div>
-                </div>
-            </div>
-            """
-            return jsonify({'intent': 'show_info', 'description': html, 'params': {}})
-
-    # --- SUGGEST FREE IP ---
-    # "me arruma um ip livre", "qual ip está livre", "sugerir ip", "preciso de um ip", "5 ips livres"
-    # Agora detecta se tiver "ip" e "livre/vago/disponivel" na mesma frase, e olha por números
-    has_ip_term = "ip" in command or "ips" in command
-    has_free_term = any(t in command for t in ["livre", "vago", "dispon", "disponível", "disponivel"])
-    
-    if has_ip_term and has_free_term:
-        # Tenta extrair um número da frase
-        count_match = re.search(r'(\d+)', command)
-        count = int(count_match.group(1)) if count_match else 1
-        
-        # Limite de segurança para não demorar demais no processamento
-        if count > 10: count = 10
-        
-        free_ips = suggest_free_ips(count)
-        
-        if free_ips:
-            if len(free_ips) == 1:
-                html = f"""
-                <div style="text-align:center; padding:15px;">
-                    <div style="margin-bottom:10px; font-size:0.9rem; color:#94a3b8;">Sugestão de IP livre:</div>
-                    <div style="background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.3); color:#34d399; padding:15px; border-radius:12px;">
-                        <h2 style="margin:0; font-family:monospace; letter-spacing:1px;">{free_ips[0]}</h2>
-                    </div>
-                </div>
-                """
-            else:
-                ips_html = "".join([f'<div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.2); color:#34d399; padding:6px 10px; border-radius:6px; font-family:monospace; font-weight:bold; font-size:1rem; text-align:center; min-width: 120px;">{ip}</div>' for ip in free_ips])
-                html = f"""
-                <div style="width: 100%; box-sizing: border-box;">
-                    <div style="margin-bottom:12px; font-size:0.9rem; color:#94a3b8;">Encontrei <strong>{len(free_ips)}</strong> IPs que parecem estar livres:</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content: center;">
-                        {ips_html}
-                    </div>
-                    <div style="margin-top:15px; font-size:0.75rem; color:#64748b; font-style:italic; text-align:center;">
-                        Estes IPs não responderam ao ping e não constam no banco de dados.
-                    </div>
-                </div>
-                """
-            return jsonify({'intent': 'show_info', 'description': html, 'params': {}})
-        else:
-             return jsonify({'intent': 'show_info', 'description': "Não consegui identificar uma sub-rede segura ou IPs livres no momento.", 'params': {}})
-             
-    # --- ASSET INTELLIGENCE (Endereços IP, Hostnames, PCs) ---
-    
-    # 1. IP Query: "quem é o ip X", "X" (genérico)
-    # Regex flexível para capturar IPs IPv4
-    ip_match = re.search(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', command)
-    if ip_match:
-        target_ip = ip_match.group(0)
-        assets = find_assets_fuzzy(target_ip)
-        
-        if assets:
-            html = "<h3 class='ai-confirm-text'>Dispositivo Encontrado</h3>" + "".join([format_asset_card(a) for a in assets])
-            return jsonify({
-                'intent': 'show_info',
-                'description': html,
-                'confirmation_text': 'Detalhes do Ativo',
-                'params': {}
-            })
-            
-    # 2. Hostname/Asset Query: "detalhes do pc X", "onde esta o computador X", "mostre a maquina X"
-    asset_match = re.search(r'(?:detalhes|ver|mostrar|buscar|quem .|onde .|info)\s+(?:d[oa]s?)?\s*(?:pc|computador|m[áa]quina|host|ativo|servidor)\s+(.+)', command)
-    if asset_match:
-        target_raw = asset_match.group(1).strip()
-        assets = find_assets_fuzzy(target_raw)
-        
-        if assets:
-            html = f"<h3 class='ai-confirm-text'>Resultados para '{target_raw}'</h3>" + "".join([format_asset_card(a) for a in assets[:5]])
-            return jsonify({
-                'intent': 'show_info',
-                'description': html,
-                'confirmation_text': f'Encontrei {len(assets)} dispositivo(s)',
-                'params': {}
-            })
-        else:
-             return jsonify({'intent': 'uknown', 'message': f'Nenhum dispositivo encontrado com o nome "{target_raw}".'})
-
-    # --- USER ACTIONS (AD REQUIRED) ---
+    if not lic_manager.has_pro_access(): return jsonify({'description': 'Premium necessário.'}), 403
     settings = get_settings()
-    ad_enabled = settings.get('ad_enabled', True)
-    
-    # Check if command is AD-related
-    is_ad_cmd = any(word in command for word in ['senha', 'usuario', 'usuário', 'desbloque', 'desabilit', 'habilit', 'ad ', 'active'])
-    
-    if is_ad_cmd and not ad_enabled:
-        return jsonify({
-            'intent': 'show_info',
-            'description': '🔴 As funcionalidades de Active Directory estão desativadas nas configurações do sistema.',
-            'confirmation_text': 'AD Desativado',
-            'params': {}
-        })
-    
-    # 3. Reset Password
-    # Structure A (Complete): [action] [user] para [password]
-    password_pattern = r'(?:reset(?:ar|a)?|mud(?:ar|a)|alter(?:ar|a)|troc(?:ar|a)|defin(?:ir|e)|reet(?:ar|a)?)\s+(?:a\s+|sua\s+)?(?:senha\s+)?(?:d[eoa]s?|o|a)?\s*(.+?)\s+para\s+(\S+)'
-    password_match = re.search(password_pattern, command)
-    
-    # Structure B (Partial - Missing Password): [action] [user]
-    # Usado apenas se o completo falhar
-    password_pattern_partial = r'(?:reset(?:ar|a)?|mud(?:ar|a)|alter(?:ar|a)|troc(?:ar|a)|defin(?:ir|e)|reet(?:ar|a)?)\s+(?:a\s+|sua\s+)?(?:senha\s+)?(?:d[eoa]s?|o|a)?\s*(.+)'
-    
-    target_raw = None
-    new_password = None
-    
-    if password_match:
-        target_raw = password_match.group(1).strip()
-        new_password = password_match.group(2).strip()
-    elif re.search(password_pattern_partial, command):
-        match_partial = re.search(password_pattern_partial, command)
-        target_raw = match_partial.group(1).strip()
-        # new_password continua None
-    
-    if target_raw:
-        # Se capturou "senha de pablo", target_raw é "pablo".
-        # Evita capturar comandos de outros tipos
-        if "desbloque" in command or "desabilit" in command:
-             target_raw = None # Deixa passar para os outros handlers
+    if not settings.get("ai_enabled", True): return jsonify({'description': 'Atena IA desativada.'}), 403
+
+    command_raw = request.json.get('command', '').strip()
+    if not command_raw: return jsonify({'message': 'Diga algo!'})
+
+    command_norm = "".join(c for c in unicodedata.normalize('NFD', command_raw.lower())
+                   if unicodedata.category(c) != 'Mn')
+
+    ai_context = session.get('ai_context')
+
+    # 0. Cancelar / Limpar
+    if command_norm in ['cancelar', 'sair', 'esquece', 'pare', 'abortar']:
+        session.pop('ai_context', None)
+        session.pop('ambiguous_ticket_id', None)
+        return jsonify({'description': 'Operação cancelada. Como posso ajudar agora?'})
+
+    # 1. Ticket Shortcut
+    ticket_match = re.search(r'chamado\s*#?\s*(\d+)', command_norm)
+    if ticket_match:
+        session.pop('ai_context', None)
+        session.pop('ambiguous_ticket_id', None)
+        tid = ticket_match.group(1)
+        from glpi_helper import get_ticket_details
+        t = get_ticket_details(session.get('username'), tid)
+        if t and not t.get('error'):
+            action = analyze_ticket_for_action(t)
+            if action:
+                candidates = action['candidates']
+                if len(candidates) == 1:
+                    u = candidates[0]
+                    return jsonify({
+                        'intent': 'authorize_ticket_reset',
+                        'description': f'Identifiquei que o chamado <strong>#{tid}</strong> é um pedido de reset para <strong>{u["DisplayName"]} ({u["SamAccountName"]})</strong>.<br><br>Deseja autorizar a Atena?',
+                        'params': {'username': u['SamAccountName'], 'display': u['DisplayName'], 'ticket_id': tid}
+                    })
+                else:
+                    session['ambiguous_ticket_id'] = tid
+                    options_html = f"<div style='margin-bottom:10px;'>O chamado <strong>#{tid}</strong> menciona '<em>{action.get('user_found_term', 'alguém')}</em>', mas encontrei {len(candidates)} opções. Qual delas?:</div>"
+                    candidates.sort(key=lambda x: len(x['SamAccountName']))
+                    for c in candidates[:5]:
+                        options_html += f"<button onclick=\"window.atenaMessage('Eu quero o {c['SamAccountName']}')\" style='display:block; width:100%; text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; margin-bottom:6px; color:white; cursor:pointer;'><strong>{c['DisplayName']}</strong><br><small style='opacity:0.6'>{c['SamAccountName']}</small></button>"
+                    return jsonify({'description': options_html})
+        return jsonify({'description': f'Analisei o chamado #{tid}, mas não encontrei um pedido claro de reset de senha.'})
+
+    # 2. Ambiguity Handling
+    if command_norm.startswith('eu quero o'):
+        target_sam = re.sub(r'(?i)^eu quero o\s+', '', command_raw).strip()
+        all_users = get_ad_users()
+        selected_user = next((u for u in all_users if (str(u.get('samaccountname') or u.get('SamAccountName') or '')).lower() == target_sam.lower()), None)
+        if not selected_user:
+            cand = find_users_fuzzy(target_sam)
+            if cand: selected_user = {'SamAccountName': cand[0]['SamAccountName'], 'DisplayName': cand[0]['DisplayName']}
         
-    if target_raw:
-        candidates = find_users_fuzzy(target_raw)
-        
-        if len(candidates) == 0:
-             all_count = len(get_ad_users())
-             return jsonify({
-                'intent': 'uknown', 
-                'message': f'Não encontrei nenhum usuário correspondente a "{target_raw}". (Base pesquisada: {all_count} usuários)'
-            })
-            
-        if len(candidates) > 1:
-            # Ambiguidade
-            candidate_list = []
-            for c in candidates:
-                candidate_list.append({
-                    'username': c.get('SamAccountName'),
-                    'name': c.get('DisplayName'),
-                    'info': c.get('Description') or c.get('EmailAddress') or ''
+        if selected_user:
+            u_sam = selected_user.get('samaccountname') or selected_user.get('SamAccountName')
+            u_disp = selected_user.get('displayname') or selected_user.get('DisplayName') or u_sam
+            if is_admin_account(u_sam, u_disp):
+                session.pop('ai_context', None)
+                return jsonify({'description': '🔴 Não tenho permissão para alterar contas administrativas.'})
+            ticket_context = session.get('ambiguous_ticket_id')
+            if ticket_context:
+                session.pop('ambiguous_ticket_id', None)
+                return jsonify({
+                    'intent': 'authorize_ticket_reset',
+                    'description': f'Certo! Reset de <strong>{u_disp} ({u_sam})</strong> no chamado <strong>#{ticket_context}</strong> confirmado.<br><br>Deseja autorizar a Atena?',
+                    'params': {'username': u_sam, 'display': u_disp, 'ticket_id': ticket_context}
                 })
-                
+            session['ai_context'] = {'state': 'AWAITING_PWD_VAL', 'username': u_sam, 'display': u_disp}
+            return jsonify({'description': f'Usuário **{u_disp} ({u_sam})** selecionado. Agora, digite a **nova senha** para ele:'})
+
+    # 3. Contextual States
+    if ai_context:
+        if ai_context.get('state') == 'AWAITING_PWD_VAL':
+            pw = command_raw
+            u, d = ai_context.get('username'), ai_context.get('display')
+            session['ai_context'] = {'state': 'AWAITING_PWD_FINAL', 'username': u, 'password': pw, 'display': d, 'ticket_id': ai_context.get('ticket_id')}
             return jsonify({
-                'intent': 'ambiguous',
-                'description': f'Encontrei {len(candidates)} usuários para "{target_raw}". Selecione um:',
-                'candidates': candidate_list,
-                'pending_action': 'reset_password',
-                'pending_params': {'password': new_password} # Pode ser None
+                'intent': 'reset_password',
+                'description': f'Resumo da ação:<br>• Usuário: <strong>{d}</strong><br>• Nova Senha: <code>{pw}</code><br><br>Deseja confirmar o reset agora?',
+                'params': {'username': u, 'password': pw, 'ticket_id': ai_context.get('ticket_id')},
+                'dangerous': True
             })
-            
-        # Match Único
-        target_user = candidates[0]
-        username = target_user.get('SamAccountName')
-        
-        if not new_password:
-            # Fluxo conversacional: Pede a senha
-            return jsonify({
-                'intent': 'incomplete_password',
-                'description': f'Entendido. Encontrei o usuário <strong>{username}</strong> ({target_user.get("DisplayName")}).\nQual será a nova senha?',
-                'pending_action': 'reset_password',
-                'pending_params': {'username': username}
-            })
-        
-        # Fluxo Completo
-        return jsonify({
-            'intent': 'reset_password',
-            'description': f'Este comando irá alterar a senha do usuário AD <strong>{username}</strong> ({target_user.get("DisplayName")}).',
-            'dangerous': True,
-            'params': {
-                'username': username,
-                'password': new_password
-            },
-            'confirmation_text': f'Deseja alterar a senha de {username} para "{new_password}"?'
-        })
+        if ai_context.get('state') == 'AWAITING_PWD_USER':
+            cand = find_users_fuzzy(command_raw)
+            if not cand: return jsonify({'description': f'Usuário "{command_raw}" não encontrado. Tente novamente:'})
+            if len(cand) == 1:
+                u, d = cand[0]['SamAccountName'], cand[0]['DisplayName']
+                if is_admin_account(u, d):
+                    session.pop('ai_context', None)
+                    return jsonify({'description': '🔴 Contas admin não podem ser manipuladas via IA.'})
+                session['ai_context'] = {'state': 'AWAITING_PWD_VAL', 'username': u, 'display': d}
+                return jsonify({'description': f'Entendido! Qual será a **nova senha** para <strong>{d} ({u})</strong>?'})
+            else:
+                options_html = "<div style='margin-bottom:10px;'>Vários encontrados. Quem é o alvo?</div>"
+                for c in cand[:5]:
+                    options_html += f"<button onclick=\"window.atenaMessage('Eu quero o {c['SamAccountName']}')\" style='display:block; width:100%; text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; margin-bottom:6px; color:white;'><strong>{c['DisplayName']}</strong><br><small style='opacity:0.6'>{c['SamAccountName']}</small></button>"
+                return jsonify({'description': options_html})
 
-    # 4. Unlock User
-    # Synonyms: desbloqueia/desbloquear, libera/liberar, destrava/destravar
-    unlock_pattern = r'(?:desbloque(?:ar|a)|liber(?:ar|a)|destrav(?:ar|a)|solt(?:ar|a))\s+(?:o\s+|a\s+)?(?:usu[aá]rio|conta)?\s*(?:d[eoa]s?)?\s*(.+)'
-    unlock_match = re.search(unlock_pattern, command)
-    
-    if unlock_match:
-        target_raw = unlock_match.group(1).strip()
-        candidates = find_users_fuzzy(target_raw)
+    # 4. Intent Detection
+    from thefuzz import fuzz
+    best_intent, best_score = None, 0
+    for intent, phrases in INTENTS.items():
+        for phrase in phrases:
+            score = fuzz.token_set_ratio(command_norm, phrase)
+            if score > best_score: best_score, best_intent = score, intent
+    if best_score < 60: best_intent = None
 
-        if len(candidates) == 0:
-             all_count = len(get_ad_users())
-             return jsonify({
-                'intent': 'uknown', 
-                'message': f'Não encontrei nenhum usuário correspondente a "{target_raw}". (Base: {all_count})'
-            })
+    if best_intent == 'help':
+        from flask import render_template
+        return jsonify({'intent': 'show_info', 'description': render_template('ai_manual.html')})
 
-        if len(candidates) > 1:
-            candidate_list = [{'username': c.get('SamAccountName'), 'name': c.get('DisplayName')} for c in candidates]
-            return jsonify({
-                'intent': 'ambiguous',
-                'description': f'Encontrei múltiplos usuários. Quem você quer desbloquear?',
-                'candidates': candidate_list,
-                'pending_action': 'unlock_user',
-                'pending_params': {}
-            })
+    if best_intent == 'reset_password':
+        parts = re.split(r' para | p/ ', command_norm)
+        pw = parts[1].strip() if len(parts) > 1 else None
+        target = re.sub(r'.*(?:senha|sneha|resetar|trocar|mudar|de|do|da)\s+', '', parts[0]).strip()
+        if target and len(target) > 2:
+            cand = find_users_fuzzy(target)
+            if cand:
+                if len(cand) == 1:
+                    u, d = cand[0]['SamAccountName'], cand[0]['DisplayName']
+                    if is_admin_account(u, d): return jsonify({'description': '🔴 Não altero admins.'})
+                    if pw: return jsonify({'intent': 'reset_password', 'description': f'Confirmar reset de <strong>{d}</strong> para <code>{pw}</code>?', 'dangerous': True, 'params': {'username': u, 'password': pw}})
+                    session['ai_context'] = {'state': 'AWAITING_PWD_VAL', 'username': u, 'display': d}
+                    return jsonify({'description': f'Certo, localizei <strong>{d}</strong>. Qual a nova senha? (Padrão: <code>Funesa2026</code>)'})
+                else:
+                    session['ai_context'] = {'state': 'AWAITING_PWD_USER'}
+                    options_html = "<div style='margin-bottom:10px;'>Achei vários. Clique no correto:</div>"
+                    for c in cand[:5]:
+                        options_html += f"<button onclick=\"window.atenaMessage('Eu quero o {c['SamAccountName']}')\" style='display:block; width:100%; text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; margin-bottom:6px; color:white;'><strong>{c['DisplayName']}</strong><br><small style='opacity:0.6'>{c['SamAccountName']}</small></button>"
+                    return jsonify({'description': options_html})
+        session['ai_context'] = {'state': 'AWAITING_PWD_USER'}
+        return jsonify({'description': 'Com certeza. Qual o **nome ou usuário** da pessoa?'})
 
-        target_user = candidates[0]
-        username = target_user.get('SamAccountName')
-        
-        return jsonify({
-            'intent': 'unlock_user',
-            'description': f'Este comando irá desbloquear a conta do usuário <strong>{username}</strong> ({target_user.get("DisplayName")}).',
-            'dangerous': False,
-            'params': {
-                'username': username
-            },
-            'confirmation_text': f'Deseja desbloquear o usuário {username}?'
-        })
-        
-    # 5. Disable User
-    # Synonyms: desabilita/desabilitar, desativa/desativar, bloqueia/bloquear
-    disable_pattern = r'(?:desabilit(?:ar|a)|desativ(?:ar|a)|bloque(?:ar|a)|inativ(?:ar|a))\s+(?:o\s+|a\s+)?(?:usu[aá]rio|conta)?\s*(?:d[eoa]s?)?\s*(.+)'
-    disable_match = re.search(disable_pattern, command)
-    
-    if disable_match:
-        target_raw = disable_match.group(1).strip()
-        candidates = find_users_fuzzy(target_raw)
-        
-        if len(candidates) == 0: 
-            return jsonify({'intent': 'uknown', 'message': f'Usuário "{target_raw}" não encontrado.'})
-            
-        if len(candidates) > 1:
-            candidate_list = [{'username': c.get('SamAccountName'), 'name': c.get('DisplayName')} for c in candidates]
-            return jsonify({
-                'intent': 'ambiguous',
-                'description': f'Múltiplos usuários encontrados.',
-                'candidates': candidate_list,
-                'pending_action': 'disable_user',
-                'pending_params': {'action': 'disable'}
-            })
-            
-        target_user = candidates[0]
-        username = target_user.get('SamAccountName')
+    if best_intent == 'glpi_tickets':
+        session.pop('ai_seen_alerts', None)
+        from glpi_helper import get_my_tickets
+        tickets = get_my_tickets(session.get('username'))
+        if isinstance(tickets, list) and tickets:
+            html = "<div style='margin-bottom:12px;'>Localizei seus chamados abertos:</div>"
+            active_statuses = [1, 2, 3, 4]
+            recent = [t for t in tickets if int(t.get('status', 0)) in active_statuses][:5]
+            for t in recent:
+                tid = t.get('id')
+                html += f"""<div onclick="window.atenaMessage('Sobre o chamado #{tid}')" style="cursor:pointer; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:12px; margin-bottom:8px;">
+                    <span style="color:#a78bfa; font-weight:bold;">#{tid}</span> {t.get('name')}</div>"""
+            return jsonify({'description': html})
+        return jsonify({'description': 'Não encontrei chamados abertos.'})
 
-        return jsonify({
-            'intent': 'disable_user',
-            'description': f'Este comando irá DESATIVAR a conta de <strong>{username}</strong> ({target_user.get("DisplayName")}).',
-            'dangerous': True,
-            'params': {
-                'username': username,
-                'action': 'disable'
-            },
-            'confirmation_text': f'Tem certeza que deseja bloquear o usuário {username}?'
-        })
+    if best_intent == 'generate_report':
+        return generate_report_logic(command_norm)
 
-    return jsonify({'intent': 'uknown', 'message': 'Posso ajudar com senhas, desbloqueios e agora também com **ativos de rede**! Tente "detalhes do pc [nome]" ou "quem é o ip [ip]".'})
+    # Fallback to general intents
+    return jsonify({'description': 'Não entendi bem... Tente pedir por um nome de usuário, "resetar senha" ou "ajuda".'})
+
+@ai_bp.route('/api/ai/intelligence', methods=['GET'])
+@login_required
+def get_ai_intelligence():
+    return get_ai_intelligence_logic()
 
 @ai_bp.route('/api/ai/execute', methods=['POST'])
+@login_required
 def execute_command():
-    if not lic_manager.has_pro_access():
-        return jsonify({'success': False, 'message': 'Recurso Premium necessário.'}), 403
-
+    if not lic_manager.has_pro_access(): return jsonify({'success': False, 'message': 'Premium necessário.'}), 403
     data = request.json
-    intent = data.get('intent')
-    params = data.get('params')
-
-    if intent == 'reset_password':
-        success, msg = reset_ad_password(params['username'], params['password'])
-        return jsonify({'success': success, 'message': msg})
+    intent, params = data.get('intent'), data.get('params')
     
-    if intent == 'unlock_user':
-        success, msg = unlock_user_account(params['username'])
-        return jsonify({'success': success, 'message': msg})
+    if intent == 'reset_password':
+        session.pop('ai_context', None)
+        u, pw = params['username'], params['password']
+        tid = params.get('ticket_id')
+        s, m = reset_ad_password(u, pw)
+        if s and tid:
+            glpi_msg = f"<p>[ATENA IA] Senha de <strong>{u}</strong> redefinida para <code>{pw}</code>.</p>"
+            add_ticket_solution(session.get('username'), tid, glpi_msg)
+            update_ticket(session.get('username'), tid, {"status": 6})
+            m = f"✅ Sucesso! Senha de <strong>{u}</strong> definida. Chamado <strong>#{tid}</strong> encerrado."
+        return jsonify({'success': s, 'message': m})
 
-    if intent == 'disable_user':
-        success, msg = toggle_user_status(params['username'])
-        return jsonify({'success': success, 'message': msg})
+    if intent == 'authorize_ticket_reset':
+        u, d, tid = params['username'], params['display'], params['ticket_id']
+        pw = "Funesa2026"
+        session['ai_context'] = {'state': 'AWAITING_PWD_FINAL', 'username': u, 'password': pw, 'display': d, 'ticket_id': tid}
+        return jsonify({
+            'success': True, 'intent': 'reset_password',
+            'description': f'👤 Usuário: <strong>{d}</strong><br>🔑 Senha: <code>{pw}</code><br>🎫 Chamado: <strong>#{tid}</strong><br><br>Confirmar?',
+            'params': {'username': u, 'password': pw, 'ticket_id': tid},
+            'dangerous': True
+        })
+    
+    if intent == 'bulk_confirm':
+        ctx = session.get('ai_context')
+        if not ctx or ctx.get('state') != 'AWAITING_BULK_CONFIRM': return jsonify({'success': False, 'message': 'Sessão expirou.'})
+        targets = ctx.get('targets', [])
+        success_count = 0
+        for sam in targets:
+            ok, _ = toggle_user_status(sam, enable=False)
+            if ok: success_count += 1
+        session.pop('ai_context', None)
+        return jsonify({'success': True, 'message': f"✅ {success_count} usuários desabilitados."})
 
-    return jsonify({'success': False, 'message': 'Ação desconhecida'})
+    return jsonify({'success': False, 'message': 'Ação desconhecida.'})
+
+def suggest_free_ips(count=1):
+    assets = load_scan_data()
+    if not assets: return []
+    from collections import Counter
+    subnets = [".".join(a.get('ip','').split('.')[:3]) for a in assets if '.' in a.get('ip','')]
+    if not subnets: return []
+    base = Counter(subnets).most_common(1)[0][0]
+    used = set([int(a.get('ip','').split('.')[-1]) for a in assets if a.get('ip','').startswith(base)])
+    found, cand = [], list(range(20, 254))
+    import random
+    random.shuffle(cand)
+    for host in cand:
+        if len(found) >= count: break
+        ip = f"{base}.{host}"
+        if host not in used and not ping_ip(ip): found.append(ip)
+    return found

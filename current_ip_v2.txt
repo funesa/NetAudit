@@ -1,0 +1,52 @@
+﻿
+Configuração de IP do Windows
+
+
+Adaptador Ethernet Ethernet:
+
+   Sufixo DNS específico de conexão. . . . . . : 
+   Endereço IPv6 de link local . . . . . . . . : fe80::1639:eaf:a9d9:1aba%10
+   Endereço IPv4. . . . . . . .  . . . . . . . : 172.23.51.50
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.254.0
+   Gateway Padrão. . . . . . . . . . . . . . . : 172.23.51.1
+
+Adaptador desconhecido Conexão Local:
+
+   Estado da mídia. . . . . . . . . . . . . .  : mídia desconectada
+   Sufixo DNS específico de conexão. . . . . . : 
+
+Adaptador desconhecido Conexão Local 2:
+
+   Estado da mídia. . . . . . . . . . . . . .  : mídia desconectada
+   Sufixo DNS específico de conexão. . . . . . : 
+
+Adaptador desconhecido OpenVPN Connect DCO Adapter:
+
+   Estado da mídia. . . . . . . . . . . . . .  : mídia desconectada
+   Sufixo DNS específico de conexão. . . . . . : 
+
+Adaptador de Rede sem Fio Wi-Fi:
+
+   Estado da mídia. . . . . . . . . . . . . .  : mídia desconectada
+   Sufixo DNS específico de conexão. . . . . . : funesa.getic
+
+Adaptador de Rede sem Fio Conexão Local* 10:
+
+   Estado da mídia. . . . . . . . . . . . . .  : mídia desconectada
+   Sufixo DNS específico de conexão. . . . . . : 
+
+Adaptador Ethernet VMware Network Adapter VMnet1:
+
+   Sufixo DNS específico de conexão. . . . . . : 
+   Endereço IPv6 de link local . . . . . . . . : fe80::fecf:7f33:c112:46b7%28
+   Endereço IPv4. . . . . . . .  . . . . . . . : 192.168.254.1
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.255.0
+   Gateway Padrão. . . . . . . . . . . . . . . : 
+
+Adaptador Ethernet VMware Network Adapter VMnet8:
+
+   Sufixo DNS específico de conexão. . . . . . : 
+   Endereço IPv6 de link local . . . . . . . . : fe80::470d:3616:bee9:5715%20
+   Endereço IPv4. . . . . . . .  . . . . . . . : 192.168.88.1
+   Máscara de Sub-rede . . . . . . . . . . . . : 255.255.255.0
+   Gateway Padrão. . . . . . . . . . . . . . . : 

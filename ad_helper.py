@@ -35,7 +35,7 @@ def load_ad_config(username=None):
                 return u['credentials']['ad']
     
     # 2. Fallback para configuração global
-    return load_encrypted_json("ad_config.json", fields_to_decrypt=["adminPass"])
+    return load_encrypted_json("ad_config.json", fields_to_decrypt=["adminPass"], default={})
 
 def record_ad_success():
     """Registra o timestamp da última conexão bem-sucedida"""
@@ -57,6 +57,42 @@ def get_last_ad_connection():
             pass
     return "Nunca"
 
+def test_ad_connection_native(server, domain, admin_user, admin_pass):
+    """Testa a conexão AD usando PowerShell nativo (mais robusto que ldap3 no Windows)"""
+    import subprocess
+    from utils import resource_path
+    
+    # Podemos usar o próprio script de busca de usuários com um filtro leve para testar o bind
+    script_path = resource_path(os.path.join("scripts", "get_ad_users.ps1"))
+    if not os.path.exists(script_path):
+        return False, "Script de teste não encontrado"
+
+    try:
+        # Prepara senhas
+        admin_pass_escaped = admin_pass.replace("'", "''")
+        
+        # Filtro que retorna apenas 1 usuário para ser rápido
+        script_block = f"& {{ $p = ConvertTo-SecureString '{admin_pass_escaped}' -AsPlainText -Force; & '{script_path}' -Server '{server}' -Domain '{domain}' -User '{admin_user}' -Password $p }}"
+        
+        cmd = ["powershell", "-NonInteractive", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script_block]
+        
+        CREATE_NO_WINDOW = 0x08000000
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=15, creationflags=CREATE_NO_WINDOW)
+        
+        if result.returncode == 0:
+            output = result.stdout.strip()
+            if output and output != "[]":
+                record_ad_success()
+                return True, "Conexão estabelecida com sucesso via Script Nativo!"
+            else:
+                return False, "Bind realizado, mas nenhum dado retornado. Verifique as permissões ou Base DN."
+        else:
+            error_msg = result.stderr.strip() or "Erro desconhecido no PowerShell"
+            return False, f"Falha no Bind Nativo: {error_msg}"
+            
+    except Exception as e:
+        return False, f"Erro ao executar teste nativo: {str(e)}"
+
 def authenticate_ad(username, password):
     """Autentica usuário no Active Directory"""
     # MODO DE TESTE
@@ -69,16 +105,20 @@ def authenticate_ad(username, password):
         return False
     
     try:
+        # Tenta primeiro via ldap3 (rápido)
         user_dn = f"{username}@{config['domain']}"
-        server = Server(config['server'], get_info=ALL)
+        server = Server(config['server'], get_info=ALL, connect_timeout=5)
         conn = Connection(server, user=user_dn, password=password, authentication=SIMPLE)
         
         if conn.bind():
             conn.unbind()
             record_ad_success()
             return True
+        
+        # Se falhar ldap3, podemos tentar o fallback nativo futuramente se necessário,
+        # mas para autenticação de login o ldap3 costuma ser suficiente se o bind administrativo funcionar.
         return False
-    except LDAPException as e:
+    except Exception as e:
         print(f"AD Auth Error: {e}")
         return False
 
@@ -145,6 +185,11 @@ def _get_ad_users_impl():
         
         try:
             users = json.loads(output)
+            # Normaliza para lista caso venha objeto único
+            if isinstance(users, dict):
+                users = [users]
+            elif not isinstance(users, list):
+                users = []
             
             # --- CRUZAMENTO DE DADOS: AD vs SCAN (scan_history.json) ---
             # Carrega histórico de scan para saber onde o usuário está logado
@@ -176,7 +221,7 @@ def _get_ad_users_impl():
 
             # Injeta dados de login nos objetos de usuário do AD
             for u in users:
-                u_clean = u.get("username", "").lower()
+                u_clean = u.get("samaccountname", "").lower()
                 if u_clean in logged_map:
                     # Adiciona lista de máquinas onde este usuário foi visto
                     u["logged_machines"] = logged_map[u_clean]
@@ -219,7 +264,7 @@ def reset_ad_password(username, new_password):
         script_block = f"""& {{
             $adminPass = ConvertTo-SecureString '{admin_pass_escaped}' -AsPlainText -Force;
             $newPass = ConvertTo-SecureString '{new_pass_escaped}' -AsPlainText -Force;
-            & '{script_path}' -Server '{config['server']}' -Domain '{config['domain']}' -AdminUser '{config['adminUser']}' -AdminPass $adminPass -TargetUsername '{username}' -NewPassword '{new_password}'
+            & '{script_path}' -Server '{config['server']}' -Domain '{config['domain']}' -AdminUser '{config['adminUser']}' -AdminPass $adminPass -TargetUsername '{username}' -NewPassword $newPass
         }}"""
         
         cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", script_block]
@@ -256,14 +301,7 @@ def reset_ad_password(username, new_password):
 
 
 
-def login_required(f):
-    """Decorator para proteger rotas que requerem autenticação"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'username' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
+
 
 # --- NOVAS FUNCIONALIDADES DE GESTÃO (PREMIUM) ---
 

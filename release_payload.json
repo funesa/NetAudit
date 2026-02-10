@@ -1,0 +1,7 @@
+{
+    "tag_name": "v2.0.0",
+    "name": "NetAudit v2.0.0 - Sistema de Auto-Atualização Robusto",
+    "body": "## 🚀 NetAudit v2.0.0\n\n### ✨ Novidades\n\n✅ **Sistema de Auto-Atualização Robusto**\n- Validação de integridade SHA256\n- Script de substituição otimizado com timeout de 3s\n- Término garantido do processo anterior\n\n✅ **Interface de Configuração Restaurada**\n- Launcher com opções de rede (Localhost/Host)\n- Gerenciamento de firewall integrado\n- Logs em tempo real\n\n✅ **Executável Único Otimizado**\n- Arquivo único (~48.5 MB)\n- Compressão UPX habilitada\n- Todas as dependências incluídas\n\n✅ **Consolidação de CSS**\n- Redução de requisições HTTP (10 → 1)\n- Arquivo minificado para melhor performance\n- Cache-busting automático\n\n### 📦 Download\n\nBaixe o arquivo `NetAudit.exe` abaixo e execute.\n\n**SHA256**: `d2bd4b8df21d83787cf29aabd60c5a8028cef4213d6f1552d2d8abdeac11c54b`\n\n### 🔄 Atualização Automática\n\nClientes com versões anteriores receberão notificação automática para atualizar.",
+    "draft": false,
+    "prerelease": false
+}

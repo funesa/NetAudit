@@ -4,7 +4,7 @@ param (
     [string]$AdminUser,
     [System.Security.SecureString]$AdminPass,
     [string]$TargetUsername,
-    [string]$NewPassword
+    [System.Security.SecureString]$NewPassword
 )
 
 try {
@@ -30,13 +30,17 @@ try {
     # Obtém o objeto DirectoryEntry do usuário para alteração
     $userEntry = $result.GetDirectoryEntry()
     
-    # Define a nova senha
-    $userEntry.Invoke("SetPassword", @($NewPassword))
+    # Define a nova senha (convertendo SecureString para plain text apenas para o Invoke)
+    $plainNewPass = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($NewPassword))
+    $userEntry.Invoke("SetPassword", @($plainNewPass))
     
     # Desbloqueia a conta (opcional, mas recomendado ao resetar)
     if ($userEntry.Properties.Contains("lockoutTime")) {
         $userEntry.Properties["lockoutTime"].Value = 0
     }
+
+    # Força redefinição de senha no próximo login
+    $userEntry.Properties["pwdLastSet"].Value = 0
     
     # Salva as alterações
     $userEntry.CommitChanges()

@@ -1,0 +1,8 @@
+{
+    "latest_version": "3.0.0",
+    "download_url": "http://172.23.51.50:8080/updates/releases/NetAudit-Setup.exe",
+    "sha256": "F9F277695DEE7AF39BE05165059D3FE7AA84851C79B4EEC8DE42A66C3102DF17",
+    "release_notes": "🚀 Versão 3.0.0 - Deploy Inicial com Sistema de Atualização Automática",
+    "min_version": "1.0.0",
+    "release_date": "2026-02-05"
+}

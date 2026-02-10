@@ -18,9 +18,9 @@
         }
     </style>
 
-    <!-- External Libs -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- External Libs - Updated to latest versions -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 
 <body class="with-sidebar">
@@ -192,7 +192,7 @@
                 <!-- Atena IA -->
                 {% if general_settings.ai_enabled %}
                 <div class="atena-pill-trigger {% if not has_pro_access %}locked-feature{% endif %}"
-                    onclick="{% if has_pro_access %}toggleAtena(){% else %}location.href='/license'{% endif %}"
+                    data-access="{{ 'pro' if has_pro_access else 'free' }}" onclick="handleAtenaTrigger(this)"
                     title="{% if has_pro_access %}Falar com Atena{% else %}Recurso Premium{% endif %}">
                     <div class="atena-pill-content">
                         <i class="ph-fill ph-sparkle atena-pill-icon"></i>
@@ -636,6 +636,56 @@
             }
         }
 
+        .ai-chip {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #818cf8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .ai-chip:hover {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: #818cf8;
+            transform: translateY(-1px);
+        }
+
+        /* DOTS ANIMATION */
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #a78bfa;
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: dot-pulse 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dot-pulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
         /* HEADER PILL (ATENA TRIGGER) */
         .atena-pill-trigger {
             margin-left: auto;
@@ -726,6 +776,15 @@
         let atenaPendingParams = null;
         let atenaInputState = null; // null | 'awaiting_password'
 
+        function handleAtenaTrigger(el) {
+            const access = el.getAttribute('data-access');
+            if (access === 'pro') {
+                toggleAtena();
+            } else {
+                location.href = '/license';
+            }
+        }
+
         function toggleAtena() {
             const backdrop = document.getElementById('atena-backdrop');
             const panel = document.getElementById('atena-panel');
@@ -743,11 +802,31 @@
                 input.value = '';
                 input.placeholder = 'Digite seu comando...';
 
+                // BOT TURBINE: Dynamic Greeting with REAL STATS
+                const hour = new Date().getHours();
+                let greeting = "Olá! ";
+                if (hour < 12) greeting = "Bom dia! ";
+                else if (hour < 18) greeting = "Boa tarde! ";
+                else greeting = "Boa noite! ";
+
                 chatArea.innerHTML = `
                     <div class="atena-message ai">
                         <div class="atena-avatar"><i class="ph-fill ph-sparkle"></i></div>
                         <div class="atena-bubble">
-                            Olá! Sou a Atena. Posso gerenciar usuários do AD ou buscar ativos na rede. Como posso ajudar?
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                <span style="font-size:1.1rem;">✨</span>
+                                <strong>${greeting} Eu sou a Atena IAbot.</strong>
+                            </div>
+                            <div id="atena-briefing" style="font-size:0.9rem; color:#94a3b8; margin-bottom:15px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;">
+                                <i class="ph ph-circle-notch ph-spin"></i> Analisando sua rede...
+                            </div>
+                            <span>O que deseja fazer agora?</span>
+                            <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
+                                <span class="ai-chip" onclick="submitAtenaCommand('resumo')">📊 Resumo</span>
+                                <span class="ai-chip" onclick="submitAtenaCommand('iniciar scan')">🚀 Scan</span>
+                                <span class="ai-chip" onclick="submitAtenaCommand('segurança')">🛡️ Segurança</span>
+                                <span class="ai-chip" onclick="submitAtenaCommand('ip livre')">📍 IPs Vagos</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -755,6 +834,40 @@
                 panel.classList.add('active');
                 backdrop.classList.add('active');
                 setTimeout(() => input.focus(), 100);
+
+                // Fetch real stats for briefing
+                fetch('/api/dashboard/stats')
+                    .then(res => res.json())
+                    .then(stats => {
+                        const briefingEl = document.getElementById('atena-briefing');
+                        if (briefingEl) {
+                            const total = stats.total_devices || 0;
+                            const online = stats.online_devices_count || 0;
+                            const alerts = stats.global_alerts || 0;
+
+                            briefingEl.innerHTML = `
+                                <div style="display:flex; flex-direction:column; gap:5px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span>Total de Ativos:</span>
+                                        <strong style="color:white;">${total}</strong>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span>Dispositivos Online:</span>
+                                        <strong style="color:#10b981;">${online}</strong>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); margin-top:5px; padding-top:5px;">
+                                        <span>Alertas Críticos:</span>
+                                        <strong style="color:${alerts > 0 ? '#ef4444' : '#10b981'};">${alerts}</strong>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(e => {
+                        console.error("Erro ao buscar briefing:", e);
+                        const briefingEl = document.getElementById('atena-briefing');
+                        if (briefingEl) briefingEl.innerHTML = "<i class='ph ph-info'></i> Use os botões abaixo para gerenciar sua infraestrutura.";
+                    });
             }
         }
 
@@ -822,11 +935,18 @@
                 input.value = '';
             }
 
-            // Loader
-            const loaderId = 'loader-' + Date.now();
-            // Evita duplicar loader se chamado recursivamente muito rápido (raro)
-            addAtenaMessage('<i class="ph ph-spinner ph-spin"></i> Processando...', 'ai', true);
-            const loaderMsg = document.getElementById('atena-chat-area').lastElementChild;
+            // Loader / Typing Indicator
+            const loaderDiv = document.createElement('div');
+            loaderDiv.className = 'atena-message ai typing';
+            loaderDiv.innerHTML = `
+                <div class="atena-avatar"><i class="ph-fill ph-sparkle"></i></div>
+                <div class="atena-bubble" style="display:flex; gap:4px; padding: 12px 20px;">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+            `;
+            const chatArea = document.getElementById('atena-chat-area');
+            chatArea.appendChild(loaderDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
 
             try {
                 const res = await fetch('/api/ai/process', {
@@ -837,9 +957,9 @@
 
                 const data = await res.json();
 
-                if (loaderMsg) loaderMsg.remove();
+                if (loaderDiv) loaderDiv.remove();
 
-                if (data.intent === 'uknown') {
+                if (data.intent === 'unknown') {
                     addAtenaMessage(data.message || "Desculpe, não entendi.", 'ai');
                 }
                 else if (data.intent === 'show_info') {
@@ -888,7 +1008,7 @@
                 }
 
             } catch (err) {
-                if (loaderMsg) loaderMsg.remove();
+                if (loaderDiv) loaderDiv.remove();
                 addAtenaMessage('Erro ao comunicar com Atena. Tente novamente.', 'ai');
             }
         }
@@ -941,6 +1061,11 @@
 
                 if (result.success) {
                     addAtenaMessage(`✅ Sucesso: ${result.message}`, 'ai');
+
+                    // Se for um scan, monitorar conclusão
+                    if (result.intent === 'start_scan') {
+                        monitorAtenaScan();
+                    }
                 } else {
                     addAtenaMessage(`❌ Erro: ${result.message}`, 'ai');
                 }
@@ -951,14 +1076,61 @@
             }
         }
 
+        async function monitorAtenaScan() {
+            const checkInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/status');
+                    const status = await res.json();
+
+                    if (!status.running) {
+                        clearInterval(checkInterval);
+
+                        const stats = status.last_results || { added: 0, updated: 0, total_found: 0 };
+
+                        const summaryHtml = `
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 15px; border-radius: 8px;">
+                            <div style="font-weight: bold; color: #10b981; margin-bottom: 8px; font-size: 1.1rem;">🏁 Varredura Finalizada!</div>
+                            <div style="color: #e2e8f0; font-size: 0.95rem; margin-bottom: 12px;">
+                                O mapeamento foi concluído. Veja o que eu encontrei:
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #34d399;">${stats.added}</div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Novos</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #60a5fa;">${stats.updated}</div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Atualizados</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-style: italic; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; margin-top: 10px;">
+                                Total de ativos respondendo: <strong>${stats.total_found}</strong>
+                            </div>
+                            <div style="margin-top: 15px; display: flex; gap: 8px;">
+                                <button onclick="location.href='/scan'" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Ver Ativos</button>
+                                <button onclick="submitAtenaCommand('me dá um ip livre')" style="flex: 1; background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">IP Livre</button>
+                            </div>
+                        </div>
+                        `;
+
+                        addAtenaMessage(summaryHtml, 'ai', true);
+                    }
+                } catch (e) {
+                    console.error("Erro ao monitorar scan via IA:", e);
+                }
+            }, 5000); // Verifica a cada 5 segundos
+        }
+
         // Hint Rotation Logic
         const atenaHints = [
             "Me peça algo...",
+            "Como está a rede?",
+            "Status de segurança?",
+            "Tem IP livre?",
+            "Buscar PC por nome?",
+            "Ver meus chamados?",
+            "Qual a minha subnet?",
             "Resetar uma senha?",
-            "Buscar um IP?",
-            "Desbloquear usuário?",
-            "Ver detalhes do PC?",
-            "Qual o host fixo?",
             "Estou aqui para ajudar ✨"
         ];
 

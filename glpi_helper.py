@@ -2,8 +2,10 @@ import requests
 import urllib3
 import json
 import os
+import base64
 import threading
 import time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from utils import safe_json_load, safe_json_save
 from requests.adapters import HTTPAdapter
@@ -51,6 +53,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Configuração Padrão
 CONFIG_FILE = 'glpi_config.json'
 
+# Debug Logger
+def debug_glpi(msg):
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open("glpi_debug.txt", "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] {msg}\n")
+    except: pass
+
 # Arquivo para salvar configs por usuário
 # Estrutura: { "username": { "url": "...", "app_token": "...", "user_token": "...", "auth_user": "...", "auth_pass": "..." } }
 GLPI_CONFIG_FILE = "glpi_config.json"
@@ -75,13 +85,17 @@ SESSION_LOCK = threading.Lock()
 def get_session(username):
     """Retorna um session_token válido do cache ou cria um novo"""
     config = load_glpi_config(username)
-    if not config: return None
+    if not config: 
+        debug_glpi(f"get_session: Config não encontrada para {username}")
+        return None
     
-    url = config.get('url')
-    app_token = config.get('app_token')
-    user_token = config.get('user_token')
-    login = config.get('auth_user')
-    password = config.get('auth_pass')
+    url = config.get('url', '').strip()
+    app_token = config.get('app_token', '').strip()
+    user_token = config.get('user_token', '').strip()
+    login = config.get('auth_user') or config.get('login') # Fallback para compatibilidade
+    if login: login = login.strip()
+    password = config.get('auth_pass') or config.get('password')
+    if password: password = password.strip()
 
     with SESSION_LOCK:
         cached = SESSION_CACHE.get(username)
@@ -89,6 +103,7 @@ def get_session(username):
             return cached['token']
     
     # Se não tem no cache ou expirou, inicia nova
+    debug_glpi(f"get_session: Iniciando nova sessão para {username} em {url}")
     new_token = init_session(url, app_token, user_token, login, password)
     if new_token:
         with SESSION_LOCK:
@@ -97,6 +112,8 @@ def get_session(username):
                 'expires': time.time() + SESSION_TIMEOUT
             }
         return new_token
+    
+    debug_glpi(f"get_session: Falha ao obter token para {username}")
     return None
 
 def init_session(url, app_token, user_token=None, login=None, password=None):
@@ -104,52 +121,51 @@ def init_session(url, app_token, user_token=None, login=None, password=None):
     Inicia sessão no GLPI e retorna o session_token.
     Prioriza user_token se fornecido, senão usa login/pass.
     """
+    if not url: return None
+    
     # Sanitização da URL: remove index.php e query params, garante base correta
     clean_url = url.split('/index.php')[0].split('?')[0].rstrip('/')
     target_url = f"{clean_url}/apirest.php/initSession"
     
-    print(f"[GLPI] Tentando conectar em: {target_url}")
+    debug_glpi(f"init_session: Tentando conectar em {target_url} (Auth: {'UserToken' if user_token else 'Basic'})")
     
     headers = {
         'Content-Type': 'application/json',
         'App-Token': app_token
     }
     
-    # Autenticação
-    if user_token:
-        headers['Authorization'] = f"user_token {user_token}"
-    elif login and password:
-        # Basic Auth é feito passando Authorization header ou parâmetros,
-        # mas requests.auth.HTTPBasicAuth faz o header correto automaticamente
-        auth = requests.auth.HTTPBasicAuth(login, password)
-        try:
-            response = requests.get(target_url, headers=headers, auth=auth, verify=False, timeout=10)
-            response.raise_for_status()
-            return response.json().get('session_token')
-        except Exception as e:
-            print(f"[GLPI] Erro initSession (Basic): {e}")
-            return None
-    
-    # Tenta conectar (User Token)
     try:
-        print(f"[GLPI] Enviando request para {target_url}")
-        response = requests.get(target_url, headers=headers, verify=False, timeout=10)
-        
-        if response.status_code != 200:
-            print(f"[GLPI] Falha: Status Code {response.status_code}")
-            print(f"[GLPI] Corpo da resposta: {response.text}")
+        # Autenticação
+        response = None
+        if user_token:
+            headers['Authorization'] = f"user_token {user_token}"
+            response = requests.get(target_url, headers=headers, verify=False, timeout=10)
+        elif login and password:
+            # Tenta via Header primeiro
+            credentials = f"{login}:{password}"
+            b64_credentials = base64.b64encode(credentials.encode()).decode()
+            headers['Authorization'] = f"Basic {b64_credentials}"
+            response = requests.get(target_url, headers=headers, verify=False, timeout=10)
             
-            if response.status_code == 400 and "IP" in response.text:
-                return None # IP não autorizado
-                
-        response.raise_for_status()
-        token = response.json().get('session_token')
-        print(f"[GLPI] Sucesso! Token: {token[:5]}...")
-        return token
+            # Se falhou por parâmetros faltando, tenta via Query String (fallback comum em GLPI)
+            if response.status_code == 400 and "LOGIN_PARAMETERS_MISSING" in response.text:
+                debug_glpi("init_session: Header falhou, tentando via query parameters...")
+                params = {'login': login, 'password': password}
+                response = requests.get(target_url, headers={'App-Token': app_token}, params=params, verify=False, timeout=10)
+        else:
+            debug_glpi("init_session: Falta credencial (UserToken ou Login/Senha)")
+            return None
+
+        if response.status_code == 200:
+            token = response.json().get('session_token')
+            debug_glpi("init_session: Sucesso!")
+            return token
+        else:
+            debug_glpi(f"init_session: Falha HTTP {response.status_code} - {response.text}")
+            return None
+
     except Exception as e:
-        print(f"[GLPI] Erro initSession: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"[GLPI] Response: {e.response.text}")
+        debug_glpi(f"init_session: Exception - {str(e)}")
         return None
 
 # Cache de tickets em memória (além do cache de sessão)
@@ -217,12 +233,36 @@ def get_my_tickets(username):
                 response = OPTIMIZED_SESSION.get(target_url, headers=headers, params=params, verify=False, timeout=(3, 5))
         
         response.raise_for_status()
-        result = response.json()
+        raw_result = response.json()
+        
+        # Normalização dos dados para o frontend (extração de nomes expandidos)
+        tickets = []
+        if isinstance(raw_result, list):
+            for t in raw_result:
+                # Extração Robusta de Metadados (Tenta vários campos comuns do GLPI)
+                
+                # 1. Localização
+                loc = t.get('_locations_id') or t.get('locations_id')
+                if isinstance(loc, dict):
+                    t['location'] = loc.get('completename') or loc.get('name')
+                
+                # 2. Requerente (Tenta Recipient e Requester)
+                req = t.get('_users_id_recipient') or t.get('users_id_recipient') or \
+                      t.get('_users_id_requester') or t.get('users_id_requester')
+                if isinstance(req, dict):
+                    t['requester_name'] = req.get('completename') or req.get('name') or req.get('realname')
+                
+                # 3. Categoria
+                cat = t.get('_itilcategories_id') or t.get('itilcategories_id')
+                if isinstance(cat, dict):
+                    t['category_name'] = cat.get('completename') or cat.get('name')
+                
+                tickets.append(t)
         
         # Salva no cache
-        TICKETS_CACHE[cache_key] = (result, time.time())
+        TICKETS_CACHE[cache_key] = (tickets, time.time())
         
-        return result
+        return tickets
         
     except Exception as e:
         print(f"[GLPI] Erro getTickets: {e}")
@@ -261,12 +301,31 @@ def get_ticket_details(username, ticket_id):
         r_ticket.raise_for_status()
         ticket_data = r_ticket.json()
         
+        # Extração Robusta de Metadados (Tenta vários campos comuns do GLPI)
+        
+        # 1. Localização
+        loc = ticket_data.get('_locations_id') or ticket_data.get('locations_id')
+        if isinstance(loc, dict):
+            ticket_data['location'] = loc.get('completename') or loc.get('name')
+        
+        # 2. Requerente (Tenta Recipient e Requester)
+        req = ticket_data.get('_users_id_recipient') or ticket_data.get('users_id_recipient') or \
+              ticket_data.get('_users_id_requester') or ticket_data.get('users_id_requester')
+        if isinstance(req, dict):
+            ticket_data['requester_name'] = req.get('completename') or req.get('name') or req.get('realname')
+        
+        # 3. Categoria
+        cat = ticket_data.get('_itilcategories_id') or ticket_data.get('itilcategories_id')
+        if isinstance(cat, dict):
+            ticket_data['category_name'] = cat.get('completename') or cat.get('name')
+        
         # Paralelizar sub-recursos com mais workers e timeout menor
         endpoints = {
             'followups': 'ITILFollowup',
             'tasks': 'TicketTask',
             'solutions': 'ITILSolution',
-            'actors': 'Ticket_User'
+            'actors': 'Ticket_User',
+            'documents': 'Document_Item'
         }
         
         def fetch_sub(key, endpoint):
@@ -476,3 +535,87 @@ def test_connection(url, app_token, user_token, login, password):
         # Aproveita e já coloca no cache se funcionou
         return True, "Conexão bem sucedida!"
     return False, "Falha na autenticação. Verifique credenciais."
+def upload_glpi_document(username, file_bytes, filename, itemtype="Ticket", items_id=None):
+    """Envia um arquivo para o GLPI e vincula a um item (chamado ou acompanhamento)"""
+    config = load_glpi_config(username)
+    if not config: return {'success': False, 'message': 'GLPI não configurado'}
+    
+    session_token = get_session(username)
+    if not session_token: return {'success': False, 'message': 'Falha na sessão'}
+    
+    url = config['url'].rstrip('/')
+    headers = {
+        'App-Token': config['app_token'],
+        'Session-Token': session_token
+    }
+    
+    target_url = f"{url}/apirest.php/Document"
+    
+    # Manifest de upload exigido pelo GLPI
+    manifest = {
+        "input": {
+            "name": filename,
+            "_itemtype": itemtype,
+            "_items_id": items_id
+        }
+    }
+    
+    try:
+        files = {
+            'uploadManifest': (None, json.dumps(manifest), 'application/json'),
+            'filename[0]': (filename, file_bytes)
+        }
+        
+        response = requests.post(target_url, headers=headers, files=files, verify=False, timeout=30)
+        
+        if response.status_code in [200, 201]:
+            return {'success': True, 'data': response.json()}
+        else:
+            return {'success': False, 'message': f"Falha no upload GLPI: {response.text}"}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def get_glpi_document_link(username, document_id):
+    """Retorna o link de download para um documento (usado pelo proxy)"""
+    config = load_glpi_config(username)
+    if not config: return None
+    
+    session_token = get_session(username)
+    if not session_token: return None
+    
+    url = config['url'].rstrip('/')
+    # O GLPI permite download via /Document/{id}?alt=media ou similar dependendo da versão
+    return f"{url}/apirest.php/Document/{document_id}?alt=media"
+
+def update_ticket(username, ticket_id, data):
+    """Atualiza metadados de um chamado (ex: status, categoria, etc)"""
+    config = load_glpi_config(username)
+    if not config: return {'error': 'Not configured'}
+    
+    session_token = get_session(username)
+    if not session_token: return {'error': 'Auth failed'}
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'App-Token': config.get('app_token'),
+        'Session-Token': session_token
+    }
+    
+    url = f"{config.get('url').rstrip('/')}/apirest.php/Ticket/{ticket_id}"
+    payload = {"input": data}
+    
+    try:
+        r = requests.put(url, headers=headers, json=payload, verify=False, timeout=10)
+        if r.status_code == 401:
+            with SESSION_LOCK:
+                if username in SESSION_CACHE: del SESSION_CACHE[username]
+            session_token = get_session(username)
+            if session_token:
+                headers['Session-Token'] = session_token
+                r = requests.put(url, headers=headers, json=payload, verify=False, timeout=10)
+        
+        r.raise_for_status()
+        return {'success': True, 'data': r.json()}
+    except Exception as e:
+        print(f"[GLPI] Erro updateTicket: {e}")
+        return {'success': False, 'error': str(e)}

@@ -46,8 +46,12 @@ class AlertManager:
                 logger.debug(f"Alerta já existe para {trigger.name} no device {device_id}")
                 return None
             
+            # Buscar Device para obter hostname
+            device = session.query(Device).filter(Device.id == device_id).first()
+            hostname = device.hostname if device else "Unknown Device"
+
             # Criar mensagem descritiva
-            message = self._format_alert_message(trigger, current_value)
+            message = self._format_alert_message(trigger, current_value, hostname)
             
             # Criar novo alerta
             alert = Alert(
@@ -240,9 +244,9 @@ class AlertManager:
         """Verifica se condição está OK (inverso da violação)"""
         return not self._evaluate_condition(trigger, current_value)
     
-    def _format_alert_message(self, trigger, current_value):
+    def _format_alert_message(self, trigger, current_value, hostname="Device"):
         """Formata mensagem do alerta"""
-        return f"{trigger.description or trigger.name}: Valor atual é {current_value}{trigger.metric_type}, threshold: {trigger.operator} {trigger.threshold}"
+        return f"[{hostname}] {trigger.description or trigger.name}: Valor atual é {current_value}{trigger.metric_type}, threshold: {trigger.operator} {trigger.threshold}"
     
     def _send_notifications(self, alert, trigger):
         """Envia notificações configuradas (placeholder para futura implementação)"""

@@ -19,7 +19,7 @@ import sys
 import shutil
 
 # --- PERSISTÊNCIA DE DADOS ---
-APP_NAME = "NetAudit"
+APP_NAME = "NetAudit Enterprise"
 
 def get_data_dir():
     """
@@ -78,16 +78,24 @@ def migrate_legacy_data():
 
     for filename in files_to_migrate:
         local_path = os.path.join(local_dir, filename)
+        # NOVO: Também checa na pasta NetAudit (sem Enterprise) se viemos de versão antiga
+        old_data_dir = os.path.join(os.environ.get('APPDATA', ''), "NetAudit")
+        old_path = os.path.join(old_data_dir, filename)
+        
         target_path = os.path.join(data_dir, filename)
         
-        # Só migra se existe no local e NÃO existe (ou é antigo) no destino
-        if os.path.exists(local_path):
-            if not os.path.exists(target_path):
+        # Só migra se existe no local/antigo e NÃO existe no destino
+        if not os.path.exists(target_path):
+            source = None
+            if os.path.exists(local_path):
+                source = local_path
+            elif os.path.exists(old_path):
+                source = old_path
+            
+            if source:
                 try:
-                    shutil.copy2(local_path, target_path)
+                    shutil.copy2(source, target_path)
                     logger.info(f"Migrado: {filename} -> {target_path}")
-                    # Opcional: remover arquivo local após migração para limpar
-                    # os.remove(local_path) 
                 except Exception as e:
                     logger.error(f"Erro ao migrar {filename}: {e}")
 
@@ -129,6 +137,13 @@ def validate_subnet(subnet_str):
         tuple: (bool, str) - (válido, mensagem de erro)
     """
     try:
+        # Sanitização básica para erros de digitação comuns
+        # Ex: 172.23.51.0;23 -> 172.23.51.0/23
+        subnet_str = subnet_str.replace(';', '/').replace(':', '/')
+        
+        # Corrigir inputs como 172.23.51.1/24 (host bits set) -> aceitar usando strict=False
+        # Mas garantir formatação correta.
+        
         ipaddress.ip_network(subnet_str, strict=False)
         return True, None
     except ValueError as e:

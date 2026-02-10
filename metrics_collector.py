@@ -93,11 +93,23 @@ class MetricsCollector:
             # Coletar IDs para processar
             device_ids = [d.id for d in devices]
             
-            with ThreadPoolExecutor(max_workers=10) as executor:
-                # Criar tarefas para cada dispositivo
-                executor.map(worker_thread_task, device_ids)
+            # Aumentar workers para lidar com 217 ativos em 60s
+            max_workers = 25 
             
-            logger.info(f">>> [Sentinel] Ciclo finalizado com isolamento de processo para {len(devices)} ativos.")
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit tasks
+                futures = {executor.submit(worker_thread_task, dev_id): dev_id for dev_id in device_ids}
+                
+                # Wait for completion with GLOBAL TIMEOUT (e.g. 50s so it finishes before next 60s job)
+                from concurrent.futures import wait, FIRST_EXCEPTION
+                done, not_done = wait(futures.keys(), timeout=50)
+                
+                for future in not_done:
+                    # Tentar cancelar tasks que não terminaram
+                    future.cancel()
+                    logger.warning(f"Timeout forcado na coleta do device {futures[future]}")
+            
+            logger.info(f">>> [Sentinel] Ciclo finalizado. {len(done)} concluídos, {len(not_done)} timeouts.")
             
         except Exception as e:
             logger.error(f"Erro crítico no motor Sentinel (ProcessPool): {e}")

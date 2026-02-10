@@ -143,30 +143,35 @@ try {
             $manager = ($props["manager"][0] -split ",")[0] -replace "CN=", ""
         }
 
-        # Objeto Usuário
+        # Objeto Usuário (Mapeado para o layout do NetAudit 2026)
         $userObj = @{
-            username    = Get-Val "samaccountname"
-            displayName = Get-Val "displayname"
-            email       = Get-Val "mail"
-            phone       = Get-Val "telephonenumber"
-            mobile      = Get-Val "mobile"
-            department  = Get-Val "department"
-            title       = Get-Val "title"
-            company     = Get-Val "company"
-            office      = Get-Val "physicaldeliveryofficename"
-            manager     = $manager
-            description = Get-Val "description"
-            status      = $status
-            statusClass = $statusClass
-            lastLogin   = $finalLogon
-            created     = if ($props.Contains("whencreated")) { [DateTime]$props["whencreated"][0] | Get-Date -Format "dd/MM/yyyy" } else { "N/A" }
-            groups      = $groups
+            samaccountname = Get-Val "samaccountname"
+            name           = Get-Val "displayname"
+            mail           = Get-Val "mail"
+            phone          = Get-Val "telephonenumber"
+            mobile         = Get-Val "mobile"
+            department     = Get-Val "department"
+            title          = Get-Val "title"
+            company        = Get-Val "company"
+            office         = Get-Val "physicaldeliveryofficename"
+            manager        = $manager
+            description    = Get-Val "description"
+            status         = $status
+            statusClass    = $statusClass
+            enabled        = !($uac -band 2)
+            lastlogon      = $finalLogon
+            created        = if ($props.Contains("whencreated")) { [DateTime]$props["whencreated"][0] | Get-Date -Format "dd/MM/yyyy" } else { "N/A" }
+            groups         = $groups
         }
         $users += $userObj
     }
 
-    # Retorna JSON puro
-    $users | ConvertTo-Json -Depth 5 -Compress
+    # Retorna JSON puro (Garante que seja uma lista mesmo com 1 item)
+    if ($users.Count -eq 1) {
+        Write-Output ("[" + ($users | ConvertTo-Json -Depth 5 -Compress) + "]")
+    } else {
+        $users | ConvertTo-Json -Depth 5 -Compress
+    }
 }
 catch {
     # Em caso de erro fatal, retorna array vazio JSON para não quebrar o Python
